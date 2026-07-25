@@ -1,9 +1,9 @@
 package scba.entity.npc.warfare;
 
-import mcbase.entity.EntityRendererType;
-import mcbase.entity.Humanoid;
-import mcbase.entity.mob.BaseMob;
-import mcbase.extended.entity.GeneralHumanoidMob;
+import minecraft.entity.EntityRendererType;
+import minecraft.entity.Humanoid;
+import minecraft.entity.mob.BaseMob;
+import minecraft.extended.entity.GeneralHumanoidMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.RegistryObject;

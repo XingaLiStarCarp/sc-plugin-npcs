@@ -1,7 +1,7 @@
 package scba.client.entity;
 
-import mcbase.extended.tlm.client.render.entity.maid.MaidModelDispatcher;
-import mcbase.extended.tlm.entity.maid.ProxyRenderMaid.MaidModelAsset;
+import minecraft.extended.tlm.client.render.entity.maid.MaidModelDispatcher;
+import minecraft.extended.tlm.entity.maid.ProxyRenderMaid.MaidModelAsset;
 import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;

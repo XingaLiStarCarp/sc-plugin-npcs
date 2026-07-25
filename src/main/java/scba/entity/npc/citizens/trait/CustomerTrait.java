@@ -2,9 +2,9 @@ package scba.entity.npc.citizens.trait;
 
 import java.util.function.Supplier;
 
-import mcbase.component.trait.MultiTrait;
-import mcbase.component.trait.entity.ItemConsumeTrait;
-import mcbase.entity.mob.BaseMob;
+import minecraft.component.trait.MultiTrait;
+import minecraft.component.trait.entity.ItemConsumeTrait;
+import minecraft.entity.mob.BaseMob;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;

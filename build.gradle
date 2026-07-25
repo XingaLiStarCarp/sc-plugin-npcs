@@ -136,6 +136,11 @@ repositories {
 	}
 	
 	maven {
+        name = "firstdarkdev"
+        url "https://maven.firstdark.dev/snapshots"
+    }
+	
+	maven {
     	name = 'CurseForge'
     	url "https://cursemaven.com"
         content {
@@ -191,10 +196,8 @@ dependencies {
     implementation fg.deobf("curse.maven:timeless-and-classics-zero-${tacz_cf_id}:${tacz_cf_version_bin_file_id}-sources-${tacz_cf_version_src_file_id}")
     // playeranimator
     implementation fg.deobf("curse.maven:playeranimator-${playeranim_cf_id}:${playeranim_cf_version_bin_file_id}")
-    // sbw
-    implementation fg.deobf("curse.maven:superb-warfare-${sbw_cf_id}:${sbw_cf_version_bin_file_id}-sources-${sbw_cf_version_src_file_id}")
-    // curios
-    implementation fg.deobf("curse.maven:curios-${curios_cf_id}:${curios_cf_version_bin_file_id}-sources-${curios_cf_version_src_file_id}")
+    // gunsmithlib
+    implementation fg.deobf("curse.maven:gunsmith-lib-${gunsmithlib_cf_id}:${gunsmithlib_cf_version_bin_file_id}-sources-${gunsmithlib_cf_version_src_file_id}")
 }
 
 mixin {

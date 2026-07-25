@@ -1,6 +1,6 @@
 package scba.datagen;
 
-import mcbase.registry.Registers;
+import minecraft.registry.Registers;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;

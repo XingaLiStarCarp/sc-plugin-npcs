@@ -2,14 +2,14 @@ package scba.entity.npc.warfare.trait;
 
 import java.util.function.Supplier;
 
-import mcbase.component.trait.MultiTrait;
-import mcbase.component.trait.entity.GoalTrait;
-import mcbase.component.trait.entity.ItemHoldTrait;
-import mcbase.component.trait.entity.RandomWanderingTrait;
-import mcbase.entity.goal.navigation.KeepDistanceToTargetGoal;
-import mcbase.entity.goal.target.NearestTargetGoal;
-import mcbase.extended.gun.GunOperator;
-import mcbase.extended.gun.goal.GunAttackGoal;
+import minecraft.component.trait.MultiTrait;
+import minecraft.component.trait.entity.GoalTrait;
+import minecraft.component.trait.entity.ItemHoldTrait;
+import minecraft.component.trait.entity.RandomWanderingTrait;
+import minecraft.entity.goal.navigation.KeepDistanceToTargetGoal;
+import minecraft.entity.goal.target.NearestTargetGoal;
+import minecraft.extended.gun.GunOperator;
+import minecraft.extended.gun.goal.GunAttackGoal;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -27,9 +27,9 @@ public class SniperTrait extends MultiTrait {
 			.add(Attributes.ATTACK_SPEED, 1)
 			.build();
 
-	public SniperTrait(String gun, boolean isTacz) {
+	public SniperTrait(String gun) {
 		super();
-		this.add(new ItemHoldTrait(GunOperator.newGun(gun, isTacz))); // 手持物品
+		this.add(new ItemHoldTrait(GunOperator.newGun(gun))); // 手持物品
 		this.add(new RandomWanderingTrait());
 		this.add(new GoalTrait()
 				.add(0, (mob) -> new GunAttackGoal(mob, 50).setBoundDistances(2.5, 64))

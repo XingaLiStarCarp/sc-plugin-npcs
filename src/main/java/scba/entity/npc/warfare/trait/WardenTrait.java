@@ -2,15 +2,15 @@ package scba.entity.npc.warfare.trait;
 
 import java.util.function.Supplier;
 
-import mcbase.component.trait.MultiTrait;
-import mcbase.component.trait.entity.GoalTrait;
-import mcbase.component.trait.entity.ItemHoldTrait;
-import mcbase.component.trait.entity.RandomWanderingTrait;
-import mcbase.component.trait.entity.StepParticlesTrait;
-import mcbase.entity.goal.action.MeleeAttackGoal;
-import mcbase.entity.goal.action.UseItemGoal;
-import mcbase.entity.goal.navigation.SprintKeepDistanceToTargetGoal;
-import mcbase.entity.goal.target.NearestTargetGoal;
+import minecraft.component.trait.MultiTrait;
+import minecraft.component.trait.entity.GoalTrait;
+import minecraft.component.trait.entity.ItemHoldTrait;
+import minecraft.component.trait.entity.RandomWanderingTrait;
+import minecraft.component.trait.entity.StepParticlesTrait;
+import minecraft.entity.goal.action.MeleeAttackGoal;
+import minecraft.entity.goal.action.UseItemGoal;
+import minecraft.entity.goal.navigation.SprintKeepDistanceToTargetGoal;
+import minecraft.entity.goal.target.NearestTargetGoal;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -31,7 +31,7 @@ public class WardenTrait extends MultiTrait {
 			.add(Attributes.ATTACK_SPEED, 2)
 			.build();
 
-	public static final String MAIN_HAND_ITEM = "superbwarfare:t_baton";
+	public static final String MAIN_HAND_ITEM = "minecraft:iron_sword";
 	public static final String OFFHAND_HAND_ITEM = "minecraft:shield";
 
 	public WardenTrait(String mainHandItem, String offhandItem, int speedUpTicks) {

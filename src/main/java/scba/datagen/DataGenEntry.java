@@ -23,10 +23,14 @@ public class DataGenEntry {
 		generator.addProvider(event.includeClient(), new ModItemModelProvider(output, helper));
 		// 语言文件
 		ModLanguageProvider.setTranslations(output, "en_us", (provider) -> {
-			provider.add(Blocks.NPC_SPAWNER, "NPC Spawner");
+			provider.add(Blocks.ORDER_TABLE, "Order Table");
+			provider.add(Blocks.ORDER_TABLE_MENU_LANG_KEY, "Order Table");
+			provider.add(Blocks.ORDER_TABLE_HINT_LANG_KEY, "Price");
 		});
 		ModLanguageProvider.setTranslations(output, "zh_cn", (provider) -> {
-			provider.add(Blocks.NPC_SPAWNER, "NPC生成器");
+			provider.add(Blocks.ORDER_TABLE, "订单台");
+			provider.add(Blocks.ORDER_TABLE_MENU_LANG_KEY, "订单台");
+			provider.add(Blocks.ORDER_TABLE_HINT_LANG_KEY, "价格");
 		});
 		ModLanguageProvider.generate(event);
 	}

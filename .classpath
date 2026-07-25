@@ -14,7 +14,6 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="D:\JavaProjects\starcarp-bluearchive\build\natives"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/libjvmsp"/>
 	<classpathentry kind="src" output="bin/main" path="src/generated/resources">
 		<attributes>
 			<attribute name="gradle_scope" value="main"/>

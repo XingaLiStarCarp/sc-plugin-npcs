@@ -1,6 +1,6 @@
 package scba.datagen;
 
-import mcbase.registry.Registers;
+import minecraft.registry.Registers;
 import net.minecraft.data.PackOutput;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.client.model.generators.BlockStateProvider;

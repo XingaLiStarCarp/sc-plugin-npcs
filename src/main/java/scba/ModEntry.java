@@ -4,9 +4,9 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-import mcbase.ModPaths;
-import mcbase.extended.tlm.entity.maid.ProxyRenderMaid.MaidModelAsset;
-import mcbase.registry.Registers;
+import minecraft.ModPaths;
+import minecraft.extended.tlm.entity.maid.ProxyRenderMaid.MaidModelAsset;
+import minecraft.registry.Registers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -19,7 +19,6 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import scba.block.Blocks;
 
 @Mod(ModEntry.MOD_ID)
 public class ModEntry {
@@ -31,7 +30,6 @@ public class ModEntry {
 		IEventBus modEventBus = context.getModEventBus();
 		// 注册注册表条目
 		Registers.register(modEventBus);
-		Blocks.register();
 
 		LOGGER.warn(MaidModelAsset.LOCAL_CUSTOM_YSM_MODEL_DIR.toString());
 
@@ -42,6 +40,7 @@ public class ModEntry {
 		context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
 		ModPaths.load(true, "scba.entity", true);
+		ModPaths.load(true, "scba.block", true);
 
 	}
 

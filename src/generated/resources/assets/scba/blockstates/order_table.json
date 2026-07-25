@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "scba:block/order_table"
+    }
+  }
+}

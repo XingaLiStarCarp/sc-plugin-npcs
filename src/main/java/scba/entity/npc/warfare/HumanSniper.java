@@ -1,9 +1,9 @@
 package scba.entity.npc.warfare;
 
-import mcbase.entity.EntityRendererType;
-import mcbase.entity.Humanoid;
-import mcbase.entity.mob.BaseMob;
-import mcbase.extended.entity.GeneralHumanoidMob;
+import minecraft.entity.EntityRendererType;
+import minecraft.entity.Humanoid;
+import minecraft.entity.mob.BaseMob;
+import minecraft.extended.entity.GeneralHumanoidMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.RegistryObject;
@@ -16,7 +16,6 @@ public class HumanSniper extends GeneralHumanoidMob {
 
 	public HumanSniper(EntityType<BaseMob> entityType, EntityRendererType<GeneralHumanoidModelInfo> rendererType, Level level) {
 		super(entityType, rendererType, level);
-		// this.addTrait(new SniperTrait("tacz:m95", true));
-		this.addTrait(new SniperTrait("superbwarfare:mosin_nagant", false));
+		this.addTrait(new SniperTrait("tacz:m95"));
 	}
 }
