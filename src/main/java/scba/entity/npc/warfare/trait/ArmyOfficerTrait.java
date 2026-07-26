@@ -42,7 +42,7 @@ public class ArmyOfficerTrait extends MultiTrait {
 		this.add(new ItemHoldTrait(gun)); // 手持物品
 		this.add(new RandomWanderingTrait());
 		this.add(new GoalTrait()
-				.add(0, (mob) -> new GunAttackGoal(mob, 50).setBoundDistances(2.5, 64))
+				.add(0, (mob) -> new GunAttackGoal(mob, 50, 0.8).setBoundDistances(2.5, 64))
 				.add(2, (mob) -> new KeepDistanceToTargetGoal(mob, 0, 64.0))
 				.add(3, (mob) -> new NearestTargetGoal(mob, true, true, (m, e) -> true)));
 	}

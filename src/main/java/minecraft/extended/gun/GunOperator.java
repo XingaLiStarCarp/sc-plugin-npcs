@@ -1,6 +1,7 @@
 package minecraft.extended.gun;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.function.BiFunction;
 
 import minecraft.extended.tacz.TaczGunOperator;
@@ -12,6 +13,51 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 public interface GunOperator {
+	static final Random SPREAD_RANDOM = new Random();
+
+	/**
+	 * 射击目标点散布
+	 * 
+	 * @param target
+	 * @param currentPos
+	 * @param spread
+	 * @return
+	 */
+	public static Vec3 getRandomPointInSpread(Vec3 target, Vec3 currentPos, double spread) {
+		Vec3 delta = new Vec3(target.x - currentPos.x, target.y - currentPos.y, target.z - currentPos.z);
+		double distance = Math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+		Vec3 direction = new Vec3(delta.x / distance, delta.y / distance, delta.z / distance);
+		double spreadRad = Math.toRadians(spread);
+		// 1. 随机水平旋转角度 (0 ~ 2PI)
+		double theta = SPREAD_RANDOM.nextDouble() * 2 * Math.PI;
+		// 2. 随机偏转半径 (0 ~ 1)，使用 sqrt 保证在圆内分布均匀
+		// 如果希望中心更密集（高斯分布），可以改用其他的随机算法
+		double randomRadius = Math.sqrt(SPREAD_RANDOM.nextDouble());
+		// 3. 计算实际的随机偏转角度 (0 ~ spreadRad)
+		double angle = spreadRad * randomRadius;
+		// 创建一个垂直于原始方向的随机向量
+		Vec3 temp;
+		if (Math.abs(direction.x) > 0.9) {
+			temp = new Vec3(0, 1, 0);
+		} else {
+			temp = new Vec3(1, 0, 0);
+		}
+		// 计算叉积得到第一个正交向量
+		Vec3 u = direction.cross(temp).normalize();
+		// 计算叉积得到第二个正交向量
+		Vec3 v = direction.cross(u);
+		double dx = direction.x * Math.cos(angle) +
+				u.x * Math.sin(angle) * Math.cos(theta) +
+				v.x * Math.sin(angle) * Math.sin(theta);
+		double dy = direction.y * Math.cos(angle) +
+				u.y * Math.sin(angle) * Math.cos(theta) +
+				v.y * Math.sin(angle) * Math.sin(theta);
+		double dz = direction.z * Math.cos(angle) +
+				u.z * Math.sin(angle) * Math.cos(theta) +
+				v.z * Math.sin(angle) * Math.sin(theta);
+		return new Vec3(currentPos.x + dx * distance, currentPos.y + dy * distance, currentPos.z + dz * distance);
+	}
+
 	public static final int INVALID_GUN_OPERATOR_TYPE = -1;
 
 	/**
@@ -84,6 +130,10 @@ public interface GunOperator {
 		return null;
 	}
 
+	public default <_Result> _Result shoot(Vec3 target, double spread) {
+		return shoot(getRandomPointInSpread(target, getGunHolder().getEyePosition(), spread));
+	}
+
 	public default <_Result> _Result shoot(Entity target) {
 		return this.shoot(target.position());
 	}
@@ -97,6 +147,10 @@ public interface GunOperator {
 	 */
 	public default <_Result> _Result shootAuto(Vec3 target) {
 		return null;
+	}
+
+	public default <_Result> _Result shootAuto(Vec3 target, double spread) {
+		return shootAuto(getRandomPointInSpread(target, getGunHolder().getEyePosition(), spread));
 	}
 
 	public default <_Result> _Result shootAuto(Entity target) {
@@ -260,6 +314,15 @@ public interface GunOperator {
 		}
 
 		@Override
+		public <_Result> _Result shoot(Vec3 target, double spread) {
+			GunOperator op = currentGunOperator();
+			if (op != null) {
+				return op.shoot(target, spread);
+			}
+			return null;
+		}
+
+		@Override
 		public <_Result> _Result shoot(Entity target) {
 			GunOperator op = currentGunOperator();
 			if (op != null) {
@@ -273,6 +336,15 @@ public interface GunOperator {
 			GunOperator op = currentGunOperator();
 			if (op != null) {
 				return op.shootAuto(target);
+			}
+			return null;
+		}
+
+		@Override
+		public <_Result> _Result shootAuto(Vec3 target, double spread) {
+			GunOperator op = currentGunOperator();
+			if (op != null) {
+				return op.shootAuto(target, spread);
 			}
 			return null;
 		}

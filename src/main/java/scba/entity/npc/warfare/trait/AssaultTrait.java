@@ -39,7 +39,7 @@ public class AssaultTrait extends MultiTrait {
 		this.add(new ItemHoldTrait(gun)); // 手持物品
 		this.add(new RandomWanderingTrait());
 		this.add(new GoalTrait()
-				.add(0, (mob) -> new GunAttackGoal(mob, 50).setBoundDistances(2.5, 64))
+				.add(0, (mob) -> new GunAttackGoal(mob, 50, 0.8).setBoundDistances(2.5, 64))
 				.add(2, (mob) -> new SprintKeepDistanceToTargetGoal(mob, 16, 24, 1.4, speedUpTicks))
 				.add(3, (mob) -> new NearestTargetGoal(mob, true, true, (m, e) -> true)));
 	}
