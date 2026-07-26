@@ -1,7 +1,6 @@
 package minecraft.extended.gun;
 
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.function.BiFunction;
 
 import minecraft.extended.tacz.TaczGunOperator;
@@ -73,6 +72,14 @@ public interface GunOperator {
 		return getGunHolder().getItemInHand(getGunHand());
 	}
 
+	/**
+	 * 朝指定坐标射击，需要手动换弹或拉栓
+	 * 提供空默认实现是考虑到一些锁头武器不接受坐标输入，只接受实体作为目标
+	 * 
+	 * @param <_Result>
+	 * @param target
+	 * @return
+	 */
 	public default <_Result> _Result shoot(Vec3 target) {
 		return null;
 	}
@@ -81,48 +88,19 @@ public interface GunOperator {
 		return this.shoot(target.position());
 	}
 
+	/**
+	 * 朝指定坐标射击，但不需要人工去换弹或拉栓，方法内在无弹药时自动换弹
+	 * 
+	 * @param <_Result>
+	 * @param target
+	 * @return
+	 */
 	public default <_Result> _Result shootAuto(Vec3 target) {
-		this.bolt();// 先拉栓子弹上膛
-		_Result result = this.shoot(target);// 射击
-		if (this.getGunAmmo() == 0) {
-			this.reload();// 本次射击完成后，如果没有子弹则上弹
-		}
-		return result;
-	}
-
-	public default <_Result> _Result shootAuto(Entity target) {
-		this.bolt();
-		_Result result = this.shoot(target);
-		if (this.getGunAmmo() == 0) {
-			this.reload();
-		}
-		return result;
-	}
-
-	public default <_Result> _Result shoot(Vec3 target, UUID uuid, double spread) {
 		return null;
 	}
 
-	public default <_Result> _Result shoot(Entity target, double spread) {
-		return this.shoot(target.position(), target.getUUID(), spread);
-	}
-
-	public default <_Result> _Result shootAuto(Vec3 target, UUID uuid, double spread) {
-		this.bolt();
-		_Result result = this.shoot(target, uuid, spread);
-		if (this.getGunAmmo() == 0) {
-			this.reload();
-		}
-		return result;
-	}
-
-	public default <_Result> _Result shootAuto(Entity target, double spread) {
-		this.bolt();
-		_Result result = this.shoot(target, spread);
-		if (this.getGunAmmo() == 0) {
-			this.reload();
-		}
-		return result;
+	public default <_Result> _Result shootAuto(Entity target) {
+		return this.shootAuto(target.position());
 	}
 
 	public default void setReloadNeedCheckAmmo(boolean needCheckAmmo) {
@@ -145,7 +123,7 @@ public interface GunOperator {
 	 * 通用持枪操作API
 	 */
 	public class GeneralGunOperator implements GunOperator {
-
+		// 不同枪械mod的GunOperator接口的构造函数列表
 		private static final ArrayList<BiFunction<LivingEntity, InteractionHand, ? extends GunOperator>> GUN_OPS = new ArrayList<>();
 
 		/**
@@ -172,6 +150,7 @@ public interface GunOperator {
 		public GeneralGunOperator(LivingEntity entity, InteractionHand hand) {
 			int gunOpNum = registeredGuns();
 			if (gunOpNum > 0) {
+				// 为每个枪械mod都创建对应的射击接口
 				this.gunOps = new GunOperator[gunOpNum];
 				for (int idx = 0; idx < gunOpNum; ++idx) {
 					this.gunOps[idx] = GUN_OPS.get(idx).apply(entity, hand);
@@ -204,6 +183,11 @@ public interface GunOperator {
 			return gunOps[0].getGunHolder();
 		}
 
+		/**
+		 * 根据当前主手持枪，获取对应的mod的枪械射击接口类型
+		 * 
+		 * @return
+		 */
 		public final int getGunOperatorType() {
 			ItemStack gunItem = this.getGunItem();
 			for (int idx = 0; idx < gunOps.length; ++idx) {
@@ -298,42 +282,6 @@ public interface GunOperator {
 			GunOperator op = currentGunOperator();
 			if (op != null) {
 				return op.shootAuto(target);
-			}
-			return null;
-		}
-
-		@Override
-		public <_Result> _Result shoot(Vec3 target, UUID uuid, double spread) {
-			GunOperator op = currentGunOperator();
-			if (op != null) {
-				return op.shoot(target, uuid, spread);
-			}
-			return null;
-		}
-
-		@Override
-		public <_Result> _Result shoot(Entity target, double spread) {
-			GunOperator op = currentGunOperator();
-			if (op != null) {
-				return op.shoot(target, spread);
-			}
-			return null;
-		}
-
-		@Override
-		public <_Result> _Result shootAuto(Vec3 target, UUID uuid, double spread) {
-			GunOperator op = currentGunOperator();
-			if (op != null) {
-				return op.shootAuto(target, uuid, spread);
-			}
-			return null;
-		}
-
-		@Override
-		public <_Result> _Result shootAuto(Entity target, double spread) {
-			GunOperator op = currentGunOperator();
-			if (op != null) {
-				return op.shootAuto(target, spread);
 			}
 			return null;
 		}

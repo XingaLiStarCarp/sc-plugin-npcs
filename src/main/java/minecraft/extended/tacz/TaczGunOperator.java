@@ -166,7 +166,7 @@ public class TaczGunOperator implements GunOperator {
 	@Override
 	@SuppressWarnings("unchecked")
 	public final ShootResult shootAuto(Vec3 target) {
-		ShootResult result = GunOperator.super.shootAuto(target);
+		ShootResult result = this.shoot(target);
 		switch (result) {
 		case ShootResult.NOT_DRAW:
 			this.draw();

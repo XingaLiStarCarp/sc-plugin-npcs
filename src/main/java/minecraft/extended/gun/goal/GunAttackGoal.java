@@ -28,6 +28,7 @@ public class GunAttackGoal extends AttackGoal {
 			break;
 		case 1:
 			gunOperator.aim(true);
+			// 射击实体，而不是坐标。有的武器可能就是锁实体头的
 			gunOperator.shootAuto(this.mob.getTarget());
 			break;
 		}
