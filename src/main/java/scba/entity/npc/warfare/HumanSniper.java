@@ -1,5 +1,6 @@
 package scba.entity.npc.warfare;
 
+import com.tacz.guns.api.item.GunTabType;
 import minecraft.entity.EntityRendererType;
 import minecraft.entity.Humanoid;
 import minecraft.entity.mob.BaseMob;
@@ -8,6 +9,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.RegistryObject;
 import scba.entity.npc.warfare.trait.SniperTrait;
+import scba.util.GunUtils;
 
 public class HumanSniper extends GeneralHumanoidMob {
 	public static final String TYPE_NAME = "npc_human_sniper";
@@ -16,6 +18,6 @@ public class HumanSniper extends GeneralHumanoidMob {
 
 	public HumanSniper(EntityType<BaseMob> entityType, EntityRendererType<GeneralHumanoidModelInfo> rendererType, Level level) {
 		super(entityType, rendererType, level);
-		this.addTrait(new SniperTrait("tacz:m95"));
+		this.addTrait(new SniperTrait(GunUtils.getRandomGun(GunTabType.SNIPER)));
 	}
 }
