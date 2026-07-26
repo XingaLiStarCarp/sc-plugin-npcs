@@ -19,6 +19,6 @@ public class HumanWarden extends GeneralHumanoidMob {
 
 	public HumanWarden(EntityType<BaseMob> entityType, EntityRendererType<GeneralHumanoidModelInfo> rendererType, Level level) {
 		super(entityType, rendererType, level);
-		this.addTrait(new WardenTrait(80));
+		this.addTrait(new WardenTrait());
 	}
 }
