@@ -52,6 +52,6 @@ public class ArmyOfficerTrait extends MultiTrait {
 	}
 
 	public ArmyOfficer‌Trait() {
-		this(GunUtils.getRandomGun(GunTabType.PISTOL));
+		this(GunUtils.getRandomGunWithAttachments(GunTabType.PISTOL));
 	}
 }

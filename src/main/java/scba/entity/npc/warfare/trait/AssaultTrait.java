@@ -49,6 +49,6 @@ public class AssaultTrait extends MultiTrait {
 	}
 
 	public AssaultTrait() {
-		this(GunUtils.getRandomGun(GunTabType.SMG), 20);
+		this(GunUtils.getRandomGunWithAttachments(GunTabType.SMG), 20);
 	}
 }

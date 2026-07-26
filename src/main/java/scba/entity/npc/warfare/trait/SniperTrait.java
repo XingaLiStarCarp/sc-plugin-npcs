@@ -49,6 +49,6 @@ public class SniperTrait extends MultiTrait {
 	}
 
 	public SniperTrait() {
-		this(GunUtils.getRandomGun(GunTabType.SNIPER));
+		this(GunUtils.getRandomGunWithAttachments(GunTabType.SNIPER));
 	}
 }
