@@ -1,5 +1,6 @@
 package scba.entity.npc.warfare.trait;
 
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import minecraft.component.trait.MultiTrait;
@@ -11,9 +12,12 @@ import minecraft.entity.goal.action.MeleeAttackGoal;
 import minecraft.entity.goal.action.UseItemGoal;
 import minecraft.entity.goal.navigation.SprintKeepDistanceToTargetGoal;
 import minecraft.entity.goal.target.NearestTargetGoal;
+import minecraft.extended.entity.GeneralHumanoidMob;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * 典狱长，冲刺近战攻击
@@ -43,7 +47,20 @@ public class WardenTrait extends MultiTrait {
 				.add(0, (mob) -> new MeleeAttackGoal(mob, 2, 15).setBoundDistances(2.5))
 				.add(1, (mob) -> new UseItemGoal(mob, true).setBoundDistances(2))
 				.add(2, (mob) -> new SprintKeepDistanceToTargetGoal(mob, 0, 1.5, 3.0, speedUpTicks))
-				.add(3, (mob) -> new NearestTargetGoal(mob, true, true, (m, e) -> true)));
+				.add(3, (mob) -> new NearestTargetGoal(mob, true, true, (self, target) -> {
+					if (target instanceof Player player && self.getPersistentData().hasUUID("OwnerUUID")) {
+						UUID ownerUUID = self.getPersistentData().getUUID("OwnerUUID");
+						if (player.getUUID().equals(ownerUUID)) {
+							return false;
+						}
+					}
+
+					if (self.getTeam() != null && target.getTeam() != null) {
+						return !self.getTeam().equals(target.getTeam());
+					}
+
+					return true;
+				})));
 	}
 
 	public WardenTrait(int speedUpTicks) {
