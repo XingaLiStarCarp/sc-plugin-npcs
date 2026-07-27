@@ -19,6 +19,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod(ModEntry.MOD_ID)
 public class ModEntry {
@@ -42,6 +43,10 @@ public class ModEntry {
 		ModPaths.load(true, "scba.entity", true);
 		ModPaths.load(true, "scba.block", true);
 
+		// 加载客户端包
+		if (FMLEnvironment.dist == Dist.CLIENT) {
+			ModPaths.load(true, "scba.client", true);
+		}
 	}
 
 	private void commonSetup(final FMLCommonSetupEvent event) {
