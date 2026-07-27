@@ -11,11 +11,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.GunTabType;
 import com.tacz.guns.api.item.attachment.AttachmentType;
-import com.tacz.guns.api.item.gun.GunItemManager;
 import com.tacz.guns.resource.index.CommonAttachmentIndex;
 import com.tacz.guns.resource.index.CommonGunIndex;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
@@ -33,7 +33,9 @@ public class GunUtils {
 
 	private static final Random RANDOM = new Random();
 
-	// 初始化枪械类型名称映射
+	private static final Logger LOGGER = Logger.getLogger("SCBA_GunUtils");
+
+    // 初始化枪械类型名称映射
 	static {
 		for (GunTabType type : GunTabType.values()) {
 			TYPE_NAME_MAP.put(type.name().toLowerCase(Locale.ROOT), type);
@@ -108,6 +110,11 @@ public class GunUtils {
 			CommonAttachmentIndex index = entry.getValue();
 			AttachmentType type = index.getType();
 
+			if (type == null){
+				LOGGER.warning("Skipping attachment {} because its type is null! (Check the gun pack JSON)");
+				continue;
+			}
+
 			if (!allowedTypes.contains(type))
 				continue;
 
@@ -137,6 +144,11 @@ public class GunUtils {
 		for (Map.Entry<AttachmentType, List<String>> entry : available.entrySet()) {
 			AttachmentType type = entry.getKey();
 			List<String> attachments = entry.getValue();
+			if (type == null || attachments == null || attachments.isEmpty()){
+					LOGGER.warning("Skipping attachment {} because its type is null! (Check the gun pack JSON)");
+					continue;
+			}
+
 			if (attachments.isEmpty())
 				continue;
 
