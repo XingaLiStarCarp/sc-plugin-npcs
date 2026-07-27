@@ -100,26 +100,46 @@ public class TaczGunOperator implements GunOperator {
 
 	@Override
 	public final void aim(boolean isAim) {
-		this.gunOperator.aim(isAim);
+		try {
+			this.gunOperator.aim(isAim);
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun aim failed", ex);
+		}
 	}
 
 	@Override
 	public final void melee() {
-		this.gunOperator.melee();
+		try {
+			this.gunOperator.melee();
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun melee failed", ex);
+		}
 	}
 
 	public final void draw() {
-		gunOperator.draw(() -> this.getGunItem());
+		try {
+			gunOperator.draw(() -> this.getGunItem());
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun draw failed", ex);
+		}
 	}
 
 	@Override
 	public final void bolt() {
-		gunOperator.bolt();
+		try {
+			this.gunOperator.bolt();
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun bolt failed", ex);
+		}
 	}
 
 	@Override
 	public final void reload() {
-		gunOperator.reload();
+		try {
+			this.gunOperator.reload();
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun reload failed", ex);
+		}
 	}
 
 	@Override
@@ -194,7 +214,11 @@ public class TaczGunOperator implements GunOperator {
 	}
 
 	public void crawl(boolean isCrawl) {
-		gunOperator.crawl(isCrawl);
+		try {
+			gunOperator.crawl(isCrawl);
+		} catch (Throwable ex) {
+			ModEntry.LOGGER.error(this.entity + " gun crawl failed", ex);
+		}
 	}
 
 	@Override
