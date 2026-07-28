@@ -68,9 +68,13 @@ public interface ProxyRenderEntity<_RenderingEntity extends Entity, _Model> {
 
 	public default _RenderingEntity syncRenderingEntityData() {
 		Entity bindEntity = bindEntity();
-		_RenderingEntity renderingEntity = renderingEntity();
-		EntityData.syncEntityData(bindEntity, renderingEntity);// 同步内存字段值
-		return renderingEntity;
+		// 服务端无虚假实体，直接返回，不需要同步
+		if (bindEntity.level().isClientSide()) {
+			_RenderingEntity renderingEntity = renderingEntity();
+			EntityData.syncEntityData(bindEntity, renderingEntity);// 同步内存字段值
+			return renderingEntity;
+		}
+		return null;
 	}
 
 	/**

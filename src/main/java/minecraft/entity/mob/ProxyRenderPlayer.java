@@ -1,8 +1,8 @@
 package minecraft.entity.mob;
 
 import minecraft.entity.Humanoid;
-import minecraft.entity.ProxyRenderEntity;
 import minecraft.entity.Humanoid.PlayerModelAsset;
+import minecraft.entity.ProxyRenderEntity;
 import minecraft.entity.player.BlankPlayer;
 import minecraft.entity.player.PlayerData;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -17,14 +17,19 @@ public interface ProxyRenderPlayer extends ProxyRenderEntity<Player, PlayerModel
 	 */
 	@Override
 	public default Player blankRenderingEntity(Entity bindEntity) {
-		return BlankPlayer.blankLocalPlayer();
+		if (bindEntity().level().isClientSide()) {
+			return BlankPlayer.blankLocalPlayer();
+		} else {
+			return null;
+		}
 	}
 
 	@Override
 	public default Player syncRenderingEntityData() {
 		Player renderingEntity = ProxyRenderEntity.super.syncRenderingEntityData();
-		Entity bindEntity = bindEntity();
-		PlayerData.syncEntityData(bindEntity, renderingEntity);
+		// 服务端运行时不创建虚假实体，renderingEntity为null
+		if (renderingEntity != null)
+			PlayerData.syncEntityData(bindEntity(), renderingEntity);
 		return renderingEntity;
 	}
 

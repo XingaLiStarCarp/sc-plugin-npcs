@@ -321,7 +321,9 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 	 * @param roamingVars
 	 */
 	public default void setRoamingVars(Object2FloatOpenHashMap<String> roamingVars) {
-		renderingEntity().roamingVars = roamingVars;
+		EntityMaid renderingMaid = renderingEntity();
+		if (renderingMaid != null)
+			renderingMaid.roamingVars = roamingVars;
 	}
 
 	/**
@@ -384,7 +386,10 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 	 * @return
 	 */
 	public default String getYsmAnimation() {
-		return renderingEntity().rouletteAnim;
+		EntityMaid renderingMaid = renderingEntity();
+		if (renderingMaid != null)
+			return renderingMaid.rouletteAnim;
+		return null;
 	}
 
 	/**
@@ -393,17 +398,24 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 	 * @return
 	 */
 	public default boolean isYsmAnimationPlaying() {
-		return renderingEntity().rouletteAnimPlaying;
+		EntityMaid renderingMaid = renderingEntity();
+		if (renderingMaid != null)
+			return renderingMaid.rouletteAnimPlaying;
+		return false;
 	}
 
 	@OnlyIn(Dist.CLIENT)
 	public default void playRouletteAnim(String rouletteAnim) {
-		renderingEntity().playRouletteAnim(rouletteAnim);
+		EntityMaid renderingMaid = renderingEntity();
+		if (renderingMaid != null)
+			renderingMaid.playRouletteAnim(rouletteAnim);
 	}
 
 	@OnlyIn(Dist.CLIENT)
 	public default void stopRouletteAnim() {
-		renderingEntity().stopRouletteAnim();
+		EntityMaid renderingMaid = renderingEntity();
+		if (renderingMaid != null)
+			renderingMaid.stopRouletteAnim();
 	}
 
 	public static ProxyRenderMaid bind(Entity bindEntity, MaidModelAsset model) {
@@ -686,8 +698,10 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 	 */
 	public default void playAnimation(int animationId) {
 		EntityMaid renderingEntity = renderingEntity();
-		renderingEntity.animationId = animationId;
-		renderingEntity.animationRecordTime = System.currentTimeMillis();
-		renderingEntity.shouldReset = true;
+		if (renderingEntity != null) {
+			renderingEntity.animationId = animationId;
+			renderingEntity.animationRecordTime = System.currentTimeMillis();
+			renderingEntity.shouldReset = true;
+		}
 	}
 }
