@@ -1,14 +1,12 @@
 package minecraft.entity.data;
 
 import java.lang.invoke.MethodHandle;
-import java.util.function.Consumer;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import jvmsp.symbols;
-import minecraft.capability.CapabilityData;
+import minecraft.core.Core;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
-import scba.ModEntry;
+import sys.jvm.symbols;
+import sys.jvm.unsafe;
 
 /**
  * 仅用作数据容器的虚假实体
@@ -17,7 +15,7 @@ public class BlankEntity {
 	private static MethodHandle Entity_defineSynchedData;
 
 	static {
-		Entity_defineSynchedData = symbols.find_virtual_method(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.METHOD, "m_8097_"), void.class);
+		Entity_defineSynchedData = symbols.find_virtual_method(Entity.class, "defineSynchedData", void.class, SynchedEntityData.Builder.class);
 	}
 
 	/**
@@ -29,20 +27,15 @@ public class BlankEntity {
 	 * @return
 	 */
 	public static final <_T extends Entity> _T allocate(Class<_T> entityClazz) {
-		_T entity = CapabilityData.construct(entityClazz, Entity.class);// 调用CapabilityProvider(Entity.class)初始化一个Entity对象
-		EntityData.setEntityData(entity, SynchedEntityDataOp.newBasicEntityData(entity));
+		// 创建一个无初始化的空Entity对象，并设置同步数据初始化一个Entity对象
+		_T entity = (_T) unsafe.allocate(entityClazz);
+		SynchedEntityData.Builder builder = SynchedEntityDataOp.newBasicEntityData(entity);
 		try {
-			Entity_defineSynchedData.invokeExact(entity);
+			Entity_defineSynchedData.invokeExact(entity, builder);
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error("create blank entity '" + entityClazz + "' failed", ex);
+			Core.logError("create blank entity '{}' failed: {}", entityClazz, Core.throwableString(ex));
 		}
-		return entity;
-	}
-
-	public static final <_T extends Entity> _T allocate(Class<_T> entityClazz, Consumer<_T> init) {
-		_T entity = BlankEntity.allocate(entityClazz);
-		init.accept(entity);
-		CapabilityData.gatherCapabilities(entity);// 必须！否则YSM不会渲染模型
+		EntityData.setEntityData(entity, builder.build());
 		return entity;
 	}
 }

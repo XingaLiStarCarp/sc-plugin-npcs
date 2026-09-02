@@ -1,0 +1,11 @@
+{
+  "type": "scba:twilight_remnant_grove",
+  "generator": {
+    "type": "minecraft:noise",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "minecraft:the_void"
+    },
+    "settings": "scba:twilight_remnant_grove"
+  }
+}

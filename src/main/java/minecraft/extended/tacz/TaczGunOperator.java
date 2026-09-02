@@ -7,15 +7,14 @@ import com.tacz.guns.api.entity.ShootResult;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.entity.shooter.LivingEntityAmmoCheck;
 
-import jvmsp.reflection;
-import jvmsp.unsafe;
+import minecraft.core.Core;
 import minecraft.extended.gun.GunOperator;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import scba.ModEntry;
+import sys.jvm.reflection;
+import sys.jvm.unsafe;
 
 public class TaczGunOperator implements GunOperator {
 	/**
@@ -104,7 +103,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			this.gunOperator.aim(isAim);
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity + " gun aim failed", ex);
+			Core.logError(this.entity + " gun aim failed", ex);
 		}
 	}
 
@@ -113,7 +112,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			this.gunOperator.melee();
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity + " gun melee failed", ex);
+			Core.logError(this.entity + " gun melee failed", ex);
 		}
 	}
 
@@ -121,7 +120,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			gunOperator.draw(() -> this.getGunItem());
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity + " gun draw failed", ex);
+			Core.logError(this.entity + " gun draw failed", ex);
 		}
 	}
 
@@ -130,7 +129,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			this.gunOperator.bolt();
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity + " gun bolt failed", ex);
+			Core.logError(this.entity + " gun bolt failed", ex);
 		}
 	}
 
@@ -139,7 +138,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			this.gunOperator.reload();
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity.getMainHandItem().save(new CompoundTag()) + " gun reload failed", ex);
+			Core.logError(this.entity + " gun reload failed", ex);
 		}
 	}
 
@@ -178,7 +177,7 @@ public class TaczGunOperator implements GunOperator {
 			try {
 				return gunOperator.shoot(() -> pitch, () -> yaw);// 防止自定义枪包抛错
 			} catch (Throwable ex) {
-				ModEntry.LOGGER.error(this.entity + " gun attack failed", ex);
+				Core.logError(this.entity + " gun attack failed", ex);
 				return ShootResult.UNKNOWN_FAIL;
 			}
 		}
@@ -218,7 +217,7 @@ public class TaczGunOperator implements GunOperator {
 		try {
 			gunOperator.crawl(isCrawl);
 		} catch (Throwable ex) {
-			ModEntry.LOGGER.error(this.entity + " gun crawl failed", ex);
+			Core.logError(this.entity + " gun crawl failed", ex);
 		}
 	}
 

@@ -5,7 +5,7 @@ import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.IGeoEntity;
 import com.github.tartaricacid.touhoulittlemaid.geckolib3.geo.IGeoEntityRenderer;
 
-import jvmsp.unsafe;
+import sys.jvm.unsafe;
 import minecraft.client.graphics.render.entity.ProxyRenderEntityRenderer;
 import minecraft.extended.tlm.entity.maid.ProxyRenderMaid;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;

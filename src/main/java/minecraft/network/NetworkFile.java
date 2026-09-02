@@ -10,32 +10,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Supplier;
 
 import javabase.CheckCode;
-import net.minecraft.network.Connection;
-import net.minecraft.network.FriendlyByteBuf;
+import minecraft.core.Core;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.simple.SimpleChannel;
-import scba.ModEntry;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class NetworkFile {
 	public static final String PROTOCOL_VERSION = "1.0";
 	public static final String CHANNEL_ID = "network_file";
 
-	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-			ResourceLocation.fromNamespaceAndPath(ModEntry.MOD_ID, CHANNEL_ID),
-			() -> PROTOCOL_VERSION,
-			PROTOCOL_VERSION::equals,
-			PROTOCOL_VERSION::equals);
+	private static PayloadRegistrar CHANNEL;
+	private static boolean initialized = false;
+
+	public static void register(PayloadRegistrar registrar) {
+		CHANNEL = registrar;
+		FileCheckPacket.registerServer();
+		FileDataPacket.registerServer();
+		initialized = true;
+	}
+
+	private static void ensureInitialized() {
+		if (!initialized) {
+			throw new IllegalStateException("NetworkFile not registered! Call NetworkFile.register() in RegisterPayloadHandlersEvent.");
+		}
+	}
 
 	@FunctionalInterface
 	public static interface FilePathResolver {
@@ -45,10 +53,11 @@ public class NetworkFile {
 	@FunctionalInterface
 	public static interface ServerCheckOperation {
 		/**
+		 * @param player       执行操作的服务器玩家
 		 * @param checkSuccess 校验成功的文件列表
 		 * @param checkFailed  校验失败的文件列表
 		 */
-		public void operate(Connection connection, List<String> checkSuccess, List<String> checkFailed);
+		public void operate(ServerPlayer player, List<String> checkSuccess, List<String> checkFailed);
 	}
 
 	/**
@@ -56,91 +65,95 @@ public class NetworkFile {
 	 * 服务端->客户端发送文件名和sha256校验码；
 	 * 客户端->服务端发送文件名和是否校验成功。校验成功则对应的信息为""，校验失败则为客户端的实际sha256值；
 	 */
-	public static record FileCheckPacket(
-			Map<String, String> fileCheckInfos) {
+	public static record FileCheckPacket(Map<String, String> fileCheckInfos) implements CustomPacketPayload {
 
-		public static void encode(FileCheckPacket packet, FriendlyByteBuf buf) {
-			buf.writeInt(packet.fileCheckInfos.size());
-			for (Map.Entry<String, String> entry : packet.fileCheckInfos.entrySet()) {
-				buf.writeUtf(entry.getKey());
-				buf.writeUtf(entry.getValue() == null ? "" : entry.getValue());
-			}
+		public static final Type<FileCheckPacket> TYPE = new Type<>(
+				ResourceLocation.fromNamespaceAndPath(Core.ModId, "file_check"));
+
+		public static final StreamCodec<RegistryFriendlyByteBuf, Map<String, String>> MAP_CODEC = ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ByteBufCodecs.STRING_UTF8);
+
+		public static final StreamCodec<RegistryFriendlyByteBuf, FileCheckPacket> STREAM_CODEC = StreamCodec.composite(
+				MAP_CODEC,
+				FileCheckPacket::fileCheckInfos,
+				FileCheckPacket::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
 		}
 
-		public static FileCheckPacket decode(FriendlyByteBuf buf) {
-			int size = buf.readInt();
-			Map<String, String> checksums = new HashMap<>();
-			for (int i = 0; i < size; i++) {
-				String fileName = buf.readUtf();
-				String checksum = buf.readUtf();
-				checksums.put(fileName, checksum.isEmpty() ? null : checksum);
+		public static void registerServer() {
+			if (CHANNEL == null) {
+				Core.logError("CHANNEL is null, cannot register FileCheckPacket server handler");
+				return;
 			}
-			return new FileCheckPacket(checksums);
+			// playToServer: 客户端->服务端
+			CHANNEL.playToServer(
+					FileCheckPacket.TYPE,
+					FileCheckPacket.STREAM_CODEC,
+					FileCheckPacket::handleServer);
 		}
 
-		public static final int ID = 0;
+		private static FilePathResolver clientResolver;
+		private static ServerCheckOperation serverOp;
+
+		public static void setClientResolver(FilePathResolver resolver) {
+			clientResolver = resolver;
+		}
+
+		public static void setServerOperation(ServerCheckOperation op) {
+			serverOp = op;
+		}
 
 		/**
 		 * 客户端处理：比对校验码，返回需要比对结果给服务端
-		 * 
-		 * @param ctx
-		 * @param clientFileResolver
 		 */
 		@OnlyIn(Dist.CLIENT)
-		private void handleClient(NetworkEvent.Context ctx, FilePathResolver clientFileResolver) {
+		public static void handleClient(FileCheckPacket packet, IPayloadContext ctx) {
 			ctx.enqueueWork(() -> {
+				if (clientResolver == null) {
+					Core.logError("ClientFileResolver not set for FileCheckPacket");
+					return;
+				}
 				Map<String, String> checkResult = new HashMap<>();
-				for (Map.Entry<String, String> entry : fileCheckInfos.entrySet()) {
+				for (Map.Entry<String, String> entry : packet.fileCheckInfos.entrySet()) {
 					String fileName = entry.getKey();
 					String serverCheckCode = entry.getValue();
-					String localCheckCode = CheckCode.sha256(clientFileResolver.resolve(fileName));
+					String localCheckCode = CheckCode.sha256(clientResolver.resolve(fileName));
 					if (serverCheckCode.equals(localCheckCode)) {
 						checkResult.put(fileName, "");
 					} else {
 						checkResult.put(fileName, localCheckCode);
 					}
 				}
-				NetworkFile.CHANNEL.sendToServer(new FileCheckPacket(checkResult));// 将校验结果发送给服务端
+				PacketDistributor.sendToServer(new FileCheckPacket(checkResult));
 			});
-			ctx.setPacketHandled(true);
 		}
 
-		@OnlyIn(Dist.DEDICATED_SERVER)
-		private static void handleServer(FileCheckPacket packet, Connection connection, ServerCheckOperation op) {
-			ArrayList<String> checkSuccess = new ArrayList<>();
-			ArrayList<String> checkFailed = new ArrayList<>();
-			for (Entry<String, String> fileCheckResult : packet.fileCheckInfos().entrySet()) {
-				if ("".equals(fileCheckResult.getValue())) {
-					checkSuccess.add(fileCheckResult.getKey());
-				} else {
-					checkFailed.add(fileCheckResult.getKey());
+		/**
+		 * 服务端处理：处理客户端返回的校验结果
+		 */
+		public static void handleServer(FileCheckPacket packet, IPayloadContext ctx) {
+			ctx.enqueueWork(() -> {
+				if (serverOp == null) {
+					Core.logError("ServerCheckOperation not set for FileCheckPacket");
+					return;
 				}
-			}
-			op.operate(connection, checkSuccess, checkFailed);
-		}
-
-		public static final void register(int id, FilePathResolver clientResolver, ServerCheckOperation serverOp) {
-			NetworkFile.CHANNEL.registerMessage(
-					id,
-					FileCheckPacket.class,
-					FileCheckPacket::encode,
-					FileCheckPacket::decode,
-					(packet, contextSupplier) -> {
-						NetworkEvent.Context ctx = contextSupplier.get();
-						if (FMLEnvironment.dist == Dist.CLIENT) {
-							// 客户端处理
-							packet.handleClient(ctx, clientResolver);
+				ServerPlayer player = (ServerPlayer) ctx.player();
+				if (player != null) {
+					ArrayList<String> checkSuccess = new ArrayList<>();
+					ArrayList<String> checkFailed = new ArrayList<>();
+					for (Entry<String, String> fileCheckResult : packet.fileCheckInfos().entrySet()) {
+						if ("".equals(fileCheckResult.getValue())) {
+							checkSuccess.add(fileCheckResult.getKey());
 						} else {
-							// 服务端处理
-							ctx.enqueueWork(() -> {
-								ServerPlayer player = ctx.getSender();
-								if (player != null) {
-									handleServer(packet, player.connection.connection, serverOp);
-								}
-							});
-							ctx.setPacketHandled(true);
+							checkFailed.add(fileCheckResult.getKey());
 						}
-					});
+					}
+					// 直接传入 player
+					serverOp.operate(player, checkSuccess, checkFailed);
+				}
+			});
 		}
 	}
 
@@ -153,70 +166,81 @@ public class NetworkFile {
 			String fileName,
 			int chunkIdx,
 			int chunkNum,
-			byte[] chunkData) {
+			byte[] chunkData) implements CustomPacketPayload {
 
-		public static void encode(FileDataPacket packet, FriendlyByteBuf buf) {
-			buf.writeUtf(packet.fileName);
-			buf.writeInt(packet.chunkIdx);
-			buf.writeInt(packet.chunkNum);
-			buf.writeInt(packet.chunkData.length);
-			buf.writeBytes(packet.chunkData);
+		public static final Type<FileDataPacket> TYPE = new Type<>(
+				ResourceLocation.fromNamespaceAndPath(Core.ModId, "file_data"));
+
+		public static final StreamCodec<RegistryFriendlyByteBuf, FileDataPacket> STREAM_CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8,
+				FileDataPacket::fileName,
+				ByteBufCodecs.INT,
+				FileDataPacket::chunkIdx,
+				ByteBufCodecs.INT,
+				FileDataPacket::chunkNum,
+				ByteBufCodecs.BYTE_ARRAY,
+				FileDataPacket::chunkData,
+				FileDataPacket::new);
+
+		@Override
+		public Type<? extends CustomPacketPayload> type() {
+			return TYPE;
 		}
 
-		public static FileDataPacket decode(FriendlyByteBuf buf) {
-			String fileName = buf.readUtf();
-			int chunkIdx = buf.readInt();
-			int chunkNum = buf.readInt();
-			int dataLen = buf.readInt();
-			byte[] chunkData = buf.readBytes(dataLen).array();
-			return new FileDataPacket(fileName, chunkIdx, chunkNum, chunkData);
+		public static void registerServer() {
+			if (CHANNEL == null) {
+				Core.logError("CHANNEL is null, cannot register FileDataPacket server handler");
+				return;
+			}
+			CHANNEL.playToServer(
+					FileDataPacket.TYPE,
+					FileDataPacket.STREAM_CODEC,
+					FileDataPacket::handleServer);
+		}
+
+		private static FileDataOperation dataOp;
+
+		public static void setDataOperation(FileDataOperation op) {
+			dataOp = op;
 		}
 
 		private static final Map<String, Map<Integer, byte[]>> chunksData = new HashMap<>();
 		private static final Map<String, Integer> chunksNum = new HashMap<>();
 
-		public static void handle(FileDataPacket packet, FileDataOperation op) {
-			String fileName = packet.fileName();
-			int chunkIdx = packet.chunkIdx();
-			int chunkNum = packet.chunkNum();
-			byte[] chunkData = packet.chunkData();
-
-			chunksNum.put(fileName, chunkNum);
-			Map<Integer, byte[]> chunks = chunksData.computeIfAbsent(fileName, f -> new HashMap<>());
-			chunks.put(chunkIdx, chunkData);
-			if (chunks.size() == chunkNum) {
-				byte[][] dataArr = new byte[chunkNum][];
-				for (int i = 0; i < chunkNum; i++) {
-					dataArr[i] = chunks.get(i);
+		@OnlyIn(Dist.CLIENT)
+		public static void handleClient(FileDataPacket packet, IPayloadContext ctx) {
+			ctx.enqueueWork(() -> {
+				if (dataOp == null) {
+					Core.logError("FileDataOperation not set for FileDataPacket");
+					return;
 				}
-				op.operate(fileName, dataArr);
-				chunksData.remove(fileName);
-				chunksNum.remove(fileName);
-			}
+				String fileName = packet.fileName();
+				int chunkIdx = packet.chunkIdx();
+				int chunkNum = packet.chunkNum();
+				byte[] chunkData = packet.chunkData();
+
+				chunksNum.put(fileName, chunkNum);
+				Map<Integer, byte[]> chunks = chunksData.computeIfAbsent(fileName, f -> new HashMap<>());
+				chunks.put(chunkIdx, chunkData);
+				if (chunks.size() == chunkNum) {
+					byte[][] dataArr = new byte[chunkNum][];
+					for (int i = 0; i < chunkNum; i++) {
+						dataArr[i] = chunks.get(i);
+					}
+					dataOp.operate(fileName, dataArr);
+					chunksData.remove(fileName);
+					chunksNum.remove(fileName);
+				}
+			});
 		}
 
-		public static final void register(int id, FileDataOperation op) {
-			// 注册文件数据分块数据包
-			NetworkFile.CHANNEL.registerMessage(
-					id,
-					FileDataPacket.class,
-					FileDataPacket::encode,
-					FileDataPacket::decode,
-					(packet, contextSupplier) -> {
-						Context ctx = contextSupplier.get();
-						ctx.enqueueWork(() -> handle(packet, op));
-						ctx.setPacketHandled(true);
-					});
+		public static void handleServer(FileDataPacket packet, IPayloadContext ctx) {
+			// 服务端收到客户端发送的FileDataPacket（目前只有客户端接收文件，所以服务端不处理）
 		}
 	}
 
 	/**
-	 * 将本地文件分块读取。<br>
-	 * 用于发送网络文件。
-	 * 
-	 * @param path
-	 * @param chunkSize
-	 * @return
+	 * 将本地文件分块读取
 	 */
 	public static final byte[][] read(Path path, int chunkSize) {
 		if (Files.exists(path) && Files.isRegularFile(path)) {
@@ -231,7 +255,6 @@ public class NetworkFile {
 					byte[] chunkData = new byte[bytesRead];
 					System.arraycopy(buf, 0, chunkData, 0, bytesRead);
 					chunks[chunkIdx] = chunkData;
-					chunkIdx++;
 				}
 				return chunks;
 			} catch (IOException ex) {
@@ -247,41 +270,43 @@ public class NetworkFile {
 
 	/**
 	 * 同步客户端文件
-	 * 
-	 * @param clientFileResolver
-	 * @param serverFileResolver
-	 * @param chunkSize
 	 */
-	public static final void syncFiles(int checkId, int dataId, FilePathResolver clientFileResolver, FilePathResolver serverFileResolver, int chunkSize) {
-		ServerCheckOperation syncFilesOp = (Connection connection, List<String> checkSuccess, List<String> checkFailed) -> {
-			for (String fileName : checkFailed) {
-				Path syncFile = serverFileResolver.resolve(fileName);
-				byte[][] fileBytes = read(syncFile, chunkSize);// 分块读取文件
-				for (int i = 0; i < fileBytes.length; ++i) {
-					FileDataPacket dataPacket = new FileDataPacket(fileName, i, fileBytes.length, fileBytes[i]);
-					CHANNEL.sendTo(dataPacket, connection, NetworkDirection.PLAY_TO_CLIENT);// 分块发送给客户端
-				}
-			}
-		};
-		FileCheckPacket.register(checkId, clientFileResolver, syncFilesOp);
-		FileDataOperation fileSaveOp = (String fileName, byte[][] chunkBytes) -> {
+	public static final void syncFiles(FilePathResolver clientFileResolver, FilePathResolver serverFileResolver, int chunkSize) {
+		ensureInitialized();
+
+		FileCheckPacket.setClientResolver(clientFileResolver);
+
+		FileDataPacket.setDataOperation((String fileName, byte[][] chunkBytes) -> {
 			Path destFile = clientFileResolver.resolve(fileName);
 			try (FileChannel channel = FileChannel.open(destFile)) {
 				for (int chunkIdx = 0; chunkIdx < chunkBytes.length; ++chunkIdx) {
-					channel.write(ByteBuffer.wrap(chunkBytes[chunkIdx]));// 将文件数据块全部按顺序写入文件
+					channel.write(ByteBuffer.wrap(chunkBytes[chunkIdx]));
 				}
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			}
+		});
+
+		// 修改：ServerCheckOperation 接收 ServerPlayer 参数
+		ServerCheckOperation syncFilesOp = (ServerPlayer player, List<String> checkSuccess, List<String> checkFailed) -> {
+			for (String fileName : checkFailed) {
+				Path syncFile = serverFileResolver.resolve(fileName);
+				byte[][] fileBytes = read(syncFile, chunkSize);
+				for (int i = 0; i < fileBytes.length; ++i) {
+					FileDataPacket dataPacket = new FileDataPacket(fileName, i, fileBytes.length, fileBytes[i]);
+					// 直接使用 ServerPlayer 发送数据包
+					PacketDistributor.sendToPlayer(player, dataPacket);
+				}
+			}
 		};
-		FileDataPacket.register(dataId, fileSaveOp);
+		FileCheckPacket.setServerOperation(syncFilesOp);
 	}
 
-	public static final void syncFiles(int checkId, int dataId, FilePathResolver clientFileResolver, FilePathResolver serverFileResolver) {
-		syncFiles(checkId, dataId, clientFileResolver, serverFileResolver, DEFAULT_CHUNK_SIZE);
+	public static final void syncFiles(FilePathResolver clientFileResolver, FilePathResolver serverFileResolver) {
+		syncFiles(clientFileResolver, serverFileResolver, DEFAULT_CHUNK_SIZE);
 	}
 
-	public static final void syncFiles(int checkId, int dataId, FilePathResolver fileResolver) {
-		syncFiles(checkId, dataId, fileResolver, fileResolver);
+	public static final void syncFiles(FilePathResolver fileResolver) {
+		syncFiles(fileResolver, fileResolver);
 	}
 }

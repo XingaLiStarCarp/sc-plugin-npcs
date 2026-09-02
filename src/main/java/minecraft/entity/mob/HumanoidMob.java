@@ -12,20 +12,19 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * 原版玩家模型实体
  */
 public class HumanoidMob extends BaseMob implements HumanoidEntity {
-
 	public static final EntityRendererType<PlayerModelAsset> RENDERER_TYPE = new EntityRendererType<>();
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
 		return BaseMob.newType(entityClazz, width, height, RENDERER_TYPE, typeName, category, attributes);
 	}
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, Supplier<AttributeSupplier> attributes) {
 		return newType(entityClazz, width, height, typeName, MobCategory.MISC, attributes);
 	}
 

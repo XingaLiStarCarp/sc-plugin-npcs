@@ -18,13 +18,12 @@ import com.github.tartaricacid.touhoulittlemaid.datagen.tag.TagEntity;
 import com.github.tartaricacid.touhoulittlemaid.entity.chatbubble.ChatBubbleManager;
 import com.github.tartaricacid.touhoulittlemaid.entity.data.MaidTaskDataMaps;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
+import com.github.tartaricacid.touhoulittlemaid.entity.passive.MaidConfigManager;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.MaidSwimManager;
 
 import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import javabase.HashFunctions;
-import jvmsp.reflection;
-import jvmsp.unsafe;
-import minecraft.ModPaths;
+import minecraft.core.Core;
 import minecraft.entity.ProxyRenderEntity;
 import minecraft.entity.data.BlankEntity;
 import minecraft.entity.data.EntityData;
@@ -39,11 +38,10 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
-import scba.ModEntry;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import sys.jvm.reflection;
+import sys.jvm.unsafe;
 
 /**
  * 可以作为Touhou Little Maid模组女仆模型渲染的委托接口。<br>
@@ -160,7 +158,7 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 		/**
 		 * 自定义YSM模型路径
 		 */
-		public static final Path LOCAL_CUSTOM_YSM_MODEL_DIR = ModPaths.config("yes_steve_model/custom");
+		public static final Path LOCAL_CUSTOM_YSM_MODEL_DIR = Core.config("yes_steve_model/custom");
 
 		private static boolean CACHED_TLM_MODEL_IDS = false;
 		private static final ArrayList<String> TLM_MODEL_IDS = new ArrayList<>();
@@ -237,7 +235,7 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 					}
 				});
 			} catch (IOException ex) {
-				ModEntry.LOGGER.warn("retrieve local custom ysm model ids failed");
+				Core.logWarn("retrieve local custom ysm model ids failed");
 			}
 			return LOCAL_CUSTOM_YSM_MODEL_IDS;
 		}
@@ -260,30 +258,39 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 			private static Field EntityMaid_swimManager;
 			private static Field EntityMaid_taskDataMaps;
 			private static Field EntityMaid_handItemsForAnimation;
+			private static Field EntityMaid_configManager;
+			private static Field MaidConfigManager_entityData;
 
 			static {
 				EntityMaid_chatBubbleManager = reflection.find_declared_field(EntityMaid.class, "chatBubbleManager");
 				EntityMaid_swimManager = reflection.find_declared_field(EntityMaid.class, "swimManager");
 				EntityMaid_taskDataMaps = reflection.find_declared_field(EntityMaid.class, "taskDataMaps");
 				EntityMaid_handItemsForAnimation = reflection.find_declared_field(EntityMaid.class, "handItemsForAnimation");
+				EntityMaid_configManager = reflection.find_declared_field(EntityMaid.class, "configManager");
+				MaidConfigManager_entityData = reflection.find_declared_field(MaidConfigManager.class, "entityData");
 			}
 		}
-		return BlankEntity.allocate(EntityMaid.class, (entityMaid) -> {
-			EntityData.copyData(initEntity, entityMaid);
-			unsafe.write(entityMaid, Symbols.EntityMaid_chatBubbleManager, new ChatBubbleManager(entityMaid));
-			unsafe.write(entityMaid, Symbols.EntityMaid_swimManager, new MaidSwimManager(entityMaid));// 游泳姿态更新器
-			unsafe.write(entityMaid, Symbols.EntityMaid_taskDataMaps, new MaidTaskDataMaps());
-			unsafe.write(entityMaid, Symbols.EntityMaid_handItemsForAnimation, new ItemStack[] { ItemStack.EMPTY, ItemStack.EMPTY });// 设置空手持物品，渲染时需要
-			entityMaid.renderState = MaidRenderState.ENTITY;
-			entityMaid.rouletteAnimPlaying = false;
-			entityMaid.rouletteAnim = "empty";
-			entityMaid.rouletteAnimDirty = false;
-			entityMaid.roamingVarsUpdateFlag = 0;
-			entityMaid.roamingVars = new Object2FloatOpenHashMap<>();
-			entityMaid.animationId = 0;
-			entityMaid.animationRecordTime = -1L;
-			entityMaid.shouldReset = false;
-		});
+		EntityMaid entityMaid = BlankEntity.allocate(EntityMaid.class);
+		// 1.20.1下必须写CapabilityData.gatherCapabilities(entity);否则YSM不会渲染模型
+		EntityData.copyData(initEntity, entityMaid);
+		unsafe.write(entityMaid, Symbols.EntityMaid_chatBubbleManager, new ChatBubbleManager(entityMaid));
+		unsafe.write(entityMaid, Symbols.EntityMaid_swimManager, new MaidSwimManager(entityMaid));// 游泳姿态更新器
+		unsafe.write(entityMaid, Symbols.EntityMaid_taskDataMaps, new MaidTaskDataMaps());
+		unsafe.write(entityMaid, Symbols.EntityMaid_handItemsForAnimation, new ItemStack[] { ItemStack.EMPTY, ItemStack.EMPTY });// 设置空手持物品，渲染时需要
+		MaidConfigManager configManager = unsafe.allocate(MaidConfigManager.class);
+		unsafe.write(configManager, Symbols.MaidConfigManager_entityData, entityMaid.getEntityData());
+		unsafe.write(entityMaid, Symbols.EntityMaid_configManager, configManager);
+		// 1.21.1新添加，关联渲染时使用的实体的SynchedEntityData对象
+		entityMaid.renderState = MaidRenderState.ENTITY;
+		entityMaid.rouletteAnimPlaying = false;
+		entityMaid.rouletteAnim = "empty";
+		entityMaid.rouletteAnimDirty = false;
+		entityMaid.roamingVarsUpdateFlag = 0;
+		entityMaid.roamingVars = new Object2FloatOpenHashMap<>();
+		entityMaid.animationId = 0;
+		entityMaid.animationRecordTime = -1L;
+		entityMaid.shouldReset = false;
+		return entityMaid;
 	}
 
 	/**
@@ -435,7 +442,6 @@ public interface ProxyRenderMaid extends ProxyRenderEntity<EntityMaid, MaidModel
 	/**
 	 * 绑定实体的女仆模型
 	 */
-	@EventBusSubscriber(value = Dist.CLIENT, bus = Bus.FORGE)
 	public static class Binder extends ModelBinder<EntityMaid, MaidModelAsset> implements ProxyRenderMaid {
 
 		public static final ProxyRenderMaid bind(Entity bindEntity, MaidModelAsset model) {

@@ -1,11 +1,10 @@
 package minecraft.component.trait.entity;
 
 import minecraft.component.TraitProvider.TraitComponent;
-import minecraft.registry.Registers;
+import minecraft.item.Items;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
  * 手持物品
@@ -24,7 +23,7 @@ public class ItemHoldTrait implements TraitComponent<LivingEntity> {
 	/**
 	 * 空物品的ID
 	 */
-	public static final String EMPTY_ID = Items.AIR.toString();
+	public static final String EMPTY_ID = net.minecraft.world.item.Items.AIR.toString();
 	public static final ItemStack EMPTY_ITEM = ItemStack.EMPTY;
 
 	public ItemHoldTrait(ItemStack mainHandItem, ItemStack offhandItem) {
@@ -37,7 +36,7 @@ public class ItemHoldTrait implements TraitComponent<LivingEntity> {
 	}
 
 	public ItemHoldTrait(String mainHandItem, String offhandItem) {
-		this(Registers.itemStack(mainHandItem), Registers.itemStack(offhandItem));
+		this(Items.itemStack(mainHandItem), Items.itemStack(offhandItem));
 	}
 
 	public ItemHoldTrait(String mainHandItem) {
@@ -66,7 +65,7 @@ public class ItemHoldTrait implements TraitComponent<LivingEntity> {
 	}
 
 	public void setMainHandItem(String mainHandItem) {
-		setMainHandItem(Registers.itemStack(mainHandItem));
+		setMainHandItem(Items.itemStack(mainHandItem));
 	}
 
 	public void setOffHandItem(ItemStack offhandItem) {
@@ -77,7 +76,7 @@ public class ItemHoldTrait implements TraitComponent<LivingEntity> {
 	}
 
 	public void setOffHandItem(String offhandItem) {
-		setMainHandItem(Registers.itemStack(offhandItem));
+		setMainHandItem(Items.itemStack(offhandItem));
 	}
 
 	@Override

@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import minecraft.TimeUtils;
-import minecraft.registry.Registers;
+import minecraft.item.Items;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -22,7 +22,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -100,7 +99,7 @@ public class EntityInteractions {
 	}
 
 	public static boolean receiveItemFromPlayerMainHand(Player player, String type, int count) {
-		return receiveItemFromPlayerMainHand(player, Registers.item(type), count);
+		return receiveItemFromPlayerMainHand(player, Items.item(type), count);
 	}
 
 	public static boolean receiveItemFromPlayerMainHand(Player player, ItemStack recvItem) {
@@ -159,7 +158,7 @@ public class EntityInteractions {
 	}
 
 	public static boolean receiveItemFromPlayerInventory(Player player, String type, int count) {
-		return receiveItemFromPlayerInventory(player, Registers.item(type), count);
+		return receiveItemFromPlayerInventory(player, Items.item(type), count);
 	}
 
 	public static void giveItemToPlayer(Player player, ItemStack give_items) {
@@ -205,7 +204,7 @@ public class EntityInteractions {
 	}
 
 	public static boolean receiveItemFromPlayerMainHandAndHold(Player player, LivingEntity entity, String type, int count) {
-		return receiveItemFromPlayerMainHandAndHold(player, entity, Registers.item(type), count);
+		return receiveItemFromPlayerMainHandAndHold(player, entity, Items.item(type), count);
 	}
 
 	public static boolean receiveItemFromPlayerMainHandAndHold(Player player, LivingEntity entity, ItemStack recvItem) {
@@ -290,16 +289,10 @@ public class EntityInteractions {
 	 * @param forceDisable 是否强制破盾
 	 */
 	public static final void disableShield(LivingEntity entity, boolean forceDisable) {
-		// 计算全身装备的破盾抗性
-		float p = 0.25f + (float) EnchantmentHelper.getBlockEfficiency(entity) * 0.05f;
-		if (forceDisable) {
-			p += 0.75f;// 此时p > 1.0，random.nextFloat()生成的随机数在0到1之间，判定必然破盾
-		}
-		// 概率破盾
-		if (entity.getRandom().nextFloat() < p) {
-			entity.stopUsingItem();
-			entity.handleEntityEvent(EntityEvent.SHIELD_DISABLED);
-		}
+		if (entity instanceof Player player)
+			player.getCooldowns().addCooldown(entity.getUseItem().getItem(), 100);
+		entity.stopUsingItem();
+		entity.level().broadcastEntityEvent(entity, EntityEvent.SHIELD_DISABLED);
 	}
 
 	public static final void spawnRunningGroundParticles(LivingEntity entity, int spwanInterval, double speed) {

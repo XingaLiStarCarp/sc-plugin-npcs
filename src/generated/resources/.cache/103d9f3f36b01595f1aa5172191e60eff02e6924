@@ -1,0 +1,11 @@
+// 1.21.1	2026-09-02T21:44:45.310592	Registries
+4921dc5be3d76290c68ab6ea515cd12fab008056 data/ba/dimension/kivotos.json
+74b3e76e81580b16db60833299d384369a76c858 data/ba/dimension/shittim_chest.json
+bdf615feb9e72d91641e0e3fcf31db4edc957cc9 data/ba/dimension_type/kivotos.json
+ec3e7f001ff1c41ec1ce5bfa707ed382ee0b607b data/ba/dimension_type/shittim_chest.json
+b690fb16b7f873166a3525cfa809dc3e5f7deb2b data/ba/worldgen/biome/shittim_chest_sea.json
+f598605db01a860a1c7fb712786634fd1fd75409 data/ba/worldgen/noise_settings/kivotos.json
+fe16dd98668aba59ac6aac601149221c8ba60e2e data/ba/worldgen/noise_settings/shittim_chest.json
+19bf239e5fb74fa5e302214f4ca81fa9f91d8a17 data/scba/dimension/twilight_remnant_grove.json
+f34d3e07f3d0252e7db621a3cec93e0fde33dc6c data/scba/dimension_type/twilight_remnant_grove.json
+eabcea8f0db499baab3e017264036af8f3e9f37e data/scba/worldgen/noise_settings/twilight_remnant_grove.json

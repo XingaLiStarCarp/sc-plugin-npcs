@@ -7,7 +7,7 @@ import minecraft.entity.EntityInteractions.CombinedTask;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent; 
 
 /**
  * 组合动作。<br>

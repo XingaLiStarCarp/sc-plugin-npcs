@@ -2,9 +2,8 @@ package minecraft.entity.player;
 
 import java.lang.reflect.Field;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import jvmsp.reflection;
-import jvmsp.unsafe;
+import sys.jvm.reflection;
+import sys.jvm.unsafe;
 import minecraft.LogicalEnd;
 import minecraft.entity.data.EntityData;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 
 public class PlayerData {
 	static Field AbstractClientPlayer_deltaMovementOnPreviousTick;
@@ -24,9 +22,9 @@ public class PlayerData {
 
 	static {
 		if (LogicalEnd.isClient()) {
-			AbstractClientPlayer_deltaMovementOnPreviousTick = reflection.find_declared_field(AbstractClientPlayer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_271420_"));
-			LocalPlayer_usingItemHand = reflection.find_declared_field(LocalPlayer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_108610_"));
-			LocalPlayer_crouching = reflection.find_declared_field(LocalPlayer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_108601_"));
+			AbstractClientPlayer_deltaMovementOnPreviousTick = reflection.find_declared_field(AbstractClientPlayer.class, "deltaMovementOnPreviousTick");
+			LocalPlayer_usingItemHand = reflection.find_declared_field(LocalPlayer.class, "usingItemHand");
+			LocalPlayer_crouching = reflection.find_declared_field(LocalPlayer.class, "crouching");
 		}
 	}
 

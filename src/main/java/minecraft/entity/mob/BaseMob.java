@@ -6,15 +6,17 @@ import java.util.HashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import jvmsp.symbols;
 import minecraft.component.OpProvider;
 import minecraft.component.TraitProvider;
+import minecraft.core.Core;
+import minecraft.core.registry.RegistryMap;
 import minecraft.entity.EntityInteractions;
 import minecraft.entity.EntityRendererType;
 import minecraft.entity.data.EntityDefaultAttributes;
 import minecraft.entity.data.SynchedEntityDataOp;
-import minecraft.registry.Registers;
+import minecraft.item.Items;
 import net.minecraft.commands.arguments.EntityAnchorArgument.Anchor;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -32,10 +34,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.RegistryObject;
-import scba.ModEntry;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import sys.jvm.symbols;
 
 public abstract class BaseMob extends PathfinderMob implements TraitProvider, OpProvider {
+	public static final RegistryMap<EntityType<?>> ENTITIES = (RegistryMap<EntityType<?>>) RegistryMap.of(Registries.ENTITY_TYPE);
 
 	private final EntityRendererType<?> rendererType;
 
@@ -64,39 +67,39 @@ public abstract class BaseMob extends PathfinderMob implements TraitProvider, Op
 	 * @param <T>
 	 * @param entityClazz
 	 * @param rendererType
-	 * @param typeName
+	 * @param typeName     带命名空间的类型名称
 	 * @param category
 	 * @param attributes   生物实体的默认属性，属性必须至少包含MAX_HEALTH和FOLLOW_TDNGE
 	 * @return
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, MobCategory category, Function<EntityType<?>, AttributeSupplier> attributes) {
-		RegistryObject<EntityType<BaseMob>> type = Registers.ENTITIES_REG.register(typeName,
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, MobCategory category, Function<EntityType<?>, AttributeSupplier> attributes) {
+		DeferredHolder<EntityType<?>, EntityType<BaseMob>> type = ENTITIES.register(typeName,
 				() -> EntityType.Builder.of((EntityType<BaseMob> entityType, Level level) -> {
 					try {
 						MethodHandle constructor = symbols.find_constructor(entityClazz, EntityType.class, EntityRendererType.class, Level.class);
 						return (T) constructor.invoke(entityType, rendererType, level);
 					} catch (Throwable ex) {
-						ModEntry.LOGGER.error("create base mob of type '" + typeName + "' failed", ex);
+						Core.logError("create base mob of type '{}' failed: {}", typeName, Core.throwableString(ex));
 						return null;
 					}
 				}, category)
 						.sized(width, height)
-						.build(Registers.MOD_ID + ":" + typeName));
+						.build(typeName));
 		rendererType.apply(type);// 将实体类型添加到指定渲染类型
 		EntityDefaultAttributes.set(type, attributes);// 设置默认的生物实体属性
-		return (RegistryObject<EntityType<T>>) (RegistryObject) type;
+		return (DeferredHolder<EntityType<?>, EntityType<T>>) (DeferredHolder) type;
 	}
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, Function<EntityType<?>, AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, Function<EntityType<?>, AttributeSupplier> attributes) {
 		return newType(entityClazz, width, height, rendererType, typeName, MobCategory.MISC, attributes);
 	}
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
 		return newType(entityClazz, width, height, rendererType, typeName, category, (t) -> attributes.get());
 	}
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, EntityRendererType<?> rendererType, String typeName, Supplier<AttributeSupplier> attributes) {
 		return newType(entityClazz, width, height, rendererType, typeName, MobCategory.MISC, attributes);
 	}
 
@@ -155,9 +158,9 @@ public abstract class BaseMob extends PathfinderMob implements TraitProvider, Op
 	 * 定义并初始化实体数据字段默认值
 	 */
 	@Override
-	protected void defineSynchedData() {
-		super.defineSynchedData();
-		SynchedEntityDataOp.defineAll(this);
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		SynchedEntityDataOp.defineAll(this.getClass(), builder);
 	}
 
 	/**
@@ -277,7 +280,7 @@ public abstract class BaseMob extends PathfinderMob implements TraitProvider, Op
 	}
 
 	public void setMainHandHold(String item) {
-		this.setMainHandHold(Registers.item(item));
+		this.setMainHandHold(Items.item(item));
 	}
 
 	public void setOffHandHold(ItemStack item) {
@@ -289,7 +292,7 @@ public abstract class BaseMob extends PathfinderMob implements TraitProvider, Op
 	}
 
 	public void setOffHandHold(String item) {
-		this.setOffHandHold(Registers.item(item));
+		this.setOffHandHold(Items.item(item));
 	}
 
 	/**

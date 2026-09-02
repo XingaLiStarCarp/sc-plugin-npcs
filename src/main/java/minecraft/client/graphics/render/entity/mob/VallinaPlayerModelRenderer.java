@@ -62,12 +62,12 @@ public abstract class VallinaPlayerModelRenderer<_T extends LivingEntity> extend
 	 * @return
 	 */
 	public static final <_T extends LivingEntity> HumanoidModel.ArmPose getArmPose(_T entity, InteractionHand hand) {
-		ItemStack item = entity.getItemInHand(hand);
-		if (item.isEmpty()) {
+		ItemStack itemstack = entity.getItemInHand(hand);
+		if (itemstack.isEmpty()) {
 			return HumanoidModel.ArmPose.EMPTY;
 		} else {
 			if (entity.getUsedItemHand() == hand && entity.getUseItemRemainingTicks() > 0) {
-				UseAnim useanim = item.getUseAnimation();
+				UseAnim useanim = itemstack.getUseAnimation();
 				if (useanim == UseAnim.BLOCK) {
 					return HumanoidModel.ArmPose.BLOCK;
 				}
@@ -95,11 +95,10 @@ public abstract class VallinaPlayerModelRenderer<_T extends LivingEntity> extend
 				if (useanim == UseAnim.BRUSH) {
 					return HumanoidModel.ArmPose.BRUSH;
 				}
-			} else if (!entity.swinging && item.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(item)) {
+			} else if (!entity.swinging && itemstack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(itemstack)) {
 				return HumanoidModel.ArmPose.CROSSBOW_HOLD;
 			}
-
-			HumanoidModel.ArmPose forgeArmPose = net.minecraftforge.client.extensions.common.IClientItemExtensions.of(item).getArmPose(entity, hand, item);
+			HumanoidModel.ArmPose forgeArmPose = net.neoforged.neoforge.client.extensions.common.IClientItemExtensions.of(itemstack).getArmPose(entity, hand, itemstack);
 			if (forgeArmPose != null)
 				return forgeArmPose;
 
@@ -121,18 +120,18 @@ public abstract class VallinaPlayerModelRenderer<_T extends LivingEntity> extend
 		} else {
 			playermodel.setAllVisible(true);
 			playermodel.crouching = entity.isCrouching();
-			HumanoidModel.ArmPose mainHandPose = getArmPose(entity, InteractionHand.MAIN_HAND);
-			HumanoidModel.ArmPose offHandPose = getArmPose(entity, InteractionHand.OFF_HAND);
-			if (mainHandPose.isTwoHanded()) {
-				offHandPose = entity.getOffhandItem().isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
+			HumanoidModel.ArmPose humanoidmodel$armpose = getArmPose(entity, InteractionHand.MAIN_HAND);
+			HumanoidModel.ArmPose humanoidmodel$armpose1 = getArmPose(entity, InteractionHand.OFF_HAND);
+			if (humanoidmodel$armpose.isTwoHanded()) {
+				humanoidmodel$armpose1 = entity.getOffhandItem().isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
 			}
 
 			if (entity.getMainArm() == HumanoidArm.RIGHT) {
-				playermodel.rightArmPose = mainHandPose;
-				playermodel.leftArmPose = offHandPose;
+				playermodel.rightArmPose = humanoidmodel$armpose;
+				playermodel.leftArmPose = humanoidmodel$armpose1;
 			} else {
-				playermodel.rightArmPose = offHandPose;
-				playermodel.leftArmPose = mainHandPose;
+				playermodel.rightArmPose = humanoidmodel$armpose1;
+				playermodel.leftArmPose = humanoidmodel$armpose;
 			}
 		}
 	}
@@ -160,34 +159,36 @@ public abstract class VallinaPlayerModelRenderer<_T extends LivingEntity> extend
 	 * @param partialTick
 	 */
 	@Override
-	protected void setupRotations(_T entity, PoseStack poseStack, float bob, float yBodyRot, float partialTick) {
-		float swimPoseInterploteFactor = entity.getSwimAmount(partialTick);
+	protected void setupRotations(_T entity, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale) {
+		float f = entity.getSwimAmount(partialTick);
+		float f1 = entity.getViewXRot(partialTick);
 		if (entity.isFallFlying()) {
-			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick);
-			float interplotedFallFlyingTick = (float) entity.getFallFlyingTicks() + partialTick;
-			float rotationFactor = Mth.clamp(interplotedFallFlyingTick * interplotedFallFlyingTick / 100.0f, 0.0f, 1.0f);
-			if (!entity.isAutoSpinAttack()) {// 三叉戟飞行旋转攻击动画
-				poseStack.mulPose(Axis.XP.rotationDegrees(rotationFactor * (-90.0f - entity.getXRot())));
+			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale);
+			float f2 = (float) entity.getFallFlyingTicks() + partialTick;
+			float f3 = Mth.clamp(f2 * f2 / 100.0F, 0.0F, 1.0F);
+			if (!entity.isAutoSpinAttack()) {
+				poseStack.mulPose(Axis.XP.rotationDegrees(f3 * (-90.0F - f1)));
 			}
-			Vec3 viewDirection = entity.getViewVector(partialTick);
-			Vec3 dx = getDeltaMovementLerped(entity, partialTick);
-			double dxHorizontalSqr = dx.horizontalDistanceSqr();
-			double viewDirectionHorizontalSqr = viewDirection.horizontalDistanceSqr();
-			if (dxHorizontalSqr > 0.0 && viewDirectionHorizontalSqr > 0.0) {
-				double d2 = (dx.x * viewDirection.x + dx.z * viewDirection.z) / Math.sqrt(dxHorizontalSqr * viewDirectionHorizontalSqr);
-				double d3 = dx.x * viewDirection.z - dx.z * viewDirection.x;
+
+			Vec3 vec3 = entity.getViewVector(partialTick);
+			Vec3 vec31 = getDeltaMovementLerped(entity, partialTick);
+			double d0 = vec31.horizontalDistanceSqr();
+			double d1 = vec3.horizontalDistanceSqr();
+			if (d0 > 0.0 && d1 > 0.0) {
+				double d2 = (vec31.x * vec3.x + vec31.z * vec3.z) / Math.sqrt(d0 * d1);
+				double d3 = vec31.x * vec3.z - vec31.z * vec3.x;
 				poseStack.mulPose(Axis.YP.rotation((float) (Math.signum(d3) * Math.acos(d2))));
 			}
-		} else if (swimPoseInterploteFactor > 0.0f) {
-			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick);
-			float swimPoseMaxFactor = entity.isInWater() || entity.isInFluidType((fluidType, height) -> entity.canSwimInFluidType(fluidType)) ? -90.0f - entity.getXRot() : -90.0f;
-			float swimPoseInterploted = Mth.lerp(swimPoseInterploteFactor, 0.0f, swimPoseMaxFactor);
-			poseStack.mulPose(Axis.XP.rotationDegrees(swimPoseInterploted));
+		} else if (f > 0.0F) {
+			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale);
+			float f4 = entity.isInWater() || entity.isInFluidType((fluidType, height) -> entity.canSwimInFluidType(fluidType)) ? -90.0F - entity.getXRot() : -90.0F;
+			float f5 = Mth.lerp(f, 0.0F, f4);
+			poseStack.mulPose(Axis.XP.rotationDegrees(f5));
 			if (entity.isVisuallySwimming()) {
-				poseStack.translate(0.0f, -1.0f, 0.3f);
+				poseStack.translate(0.0F, -1.0F, 0.3F);
 			}
 		} else {
-			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick);
+			super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale);
 		}
 	}
 

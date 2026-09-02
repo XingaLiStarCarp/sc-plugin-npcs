@@ -4,22 +4,21 @@ import minecraft.component.OpProvider;
 import minecraft.component.trait.OpTrait;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 /**
  * 实体攻击/被攻击时的特性
  */
-@EventBusSubscriber(bus = Bus.FORGE)
-public abstract class AttackTrait<_TargetEntity extends LivingEntity & OpProvider> extends OpTrait<_TargetEntity, LivingAttackEvent, AttackTrait<_TargetEntity>> {
+@EventBusSubscriber
+public abstract class AttackTrait<_TargetEntity extends LivingEntity & OpProvider> extends OpTrait<_TargetEntity, LivingIncomingDamageEvent, AttackTrait<_TargetEntity>> {
 
 	public AttackTrait() {
-		super(LivingAttackEvent.class);
+		super(LivingIncomingDamageEvent.class);
 	}
 
-	protected boolean operate(_TargetEntity target, LivingAttackEvent event) {
+	protected boolean operate(_TargetEntity target, LivingIncomingDamageEvent event) {
 		LivingEntity damagee = event.getEntity();
 		if (target == damagee) {
 			this.onAttacked(event, event.getSource().getEntity(), target);
@@ -36,7 +35,7 @@ public abstract class AttackTrait<_TargetEntity extends LivingEntity & OpProvide
 	 * @param damagee
 	 * @param mob
 	 */
-	public void onAttack(LivingAttackEvent event, LivingEntity damagee, LivingEntity target) {
+	public void onAttack(LivingIncomingDamageEvent event, LivingEntity damagee, LivingEntity target) {
 
 	}
 
@@ -47,7 +46,7 @@ public abstract class AttackTrait<_TargetEntity extends LivingEntity & OpProvide
 	 * @param damager
 	 * @param mob
 	 */
-	public void onAttacked(LivingAttackEvent event, Entity damager, LivingEntity target) {
+	public void onAttacked(LivingIncomingDamageEvent event, Entity damager, LivingEntity target) {
 
 	}
 
@@ -57,12 +56,12 @@ public abstract class AttackTrait<_TargetEntity extends LivingEntity & OpProvide
 	 * @param event
 	 */
 	@SubscribeEvent
-	public static void onLivingAttackEvent(LivingAttackEvent event) {
+	public static void onLivingIncomingDamageEvent(LivingIncomingDamageEvent event) {
 		if (event.getSource().getEntity() instanceof OpProvider damager) {
-			damager.executeOpComponent(LivingAttackEvent.class, event);
+			damager.executeOpComponent(LivingIncomingDamageEvent.class, event);
 		}
 		if (event.getEntity() instanceof OpProvider damagee) {
-			damagee.executeOpComponent(LivingAttackEvent.class, event);
+			damagee.executeOpComponent(LivingIncomingDamageEvent.class, event);
 		}
 	}
 }

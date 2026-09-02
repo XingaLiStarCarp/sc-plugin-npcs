@@ -6,12 +6,13 @@ import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import jvmsp.reflection;
-import jvmsp.reflection.reflection_factory;
+import sys.jvm.reflection;
+import sys.jvm.reflection.reflection_factory;
+import sys.jvm.unsafe;
+
 import minecraft.LogicalEnd;
 import minecraft.entity.data.SynchedEntityDataOp;
-import jvmsp.unsafe;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -19,7 +20,6 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 
 public class BlankPlayer {
 
@@ -34,7 +34,7 @@ public class BlankPlayer {
 		// 仅客户端有LocalPlayer类
 		if (LogicalEnd.isClient()) {
 			AbstractClientPlayer_ctor = reflection.find_constructor(AbstractClientPlayer.class, ClientLevel.class, GameProfile.class);
-			ClientPacketListener_localGameProfile = reflection.find_declared_field(ClientPacketListener.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_104886_"));
+			ClientPacketListener_localGameProfile = reflection.find_declared_field(ClientPacketListener.class, "localGameProfile");
 		}
 		GameProfile_id = reflection.find_declared_field(GameProfile.class, "id");
 		GameProfile_name = reflection.find_declared_field(GameProfile.class, "name");
@@ -84,7 +84,7 @@ public class BlankPlayer {
 	}
 
 	public static final GameProfile createGameProfile(String name) {
-		return createGameProfile(null, name);
+		return createGameProfile(UUID.randomUUID(), name);
 	}
 
 	public static final GameProfile blankGameProfile() {

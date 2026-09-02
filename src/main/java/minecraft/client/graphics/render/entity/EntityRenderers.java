@@ -7,10 +7,6 @@ import java.util.Map;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import jvmsp.reflection;
-import jvmsp.symbols;
-import jvmsp.unsafe;
 import minecraft.entity.EntityRendererType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -27,20 +23,21 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import sys.jvm.reflection;
+import sys.jvm.symbols;
+import sys.jvm.unsafe;
 
 /**
  * 实体渲染器操作
  */
-@EventBusSubscriber(value = Dist.CLIENT, bus = Bus.MOD)
+@EventBusSubscriber(value = Dist.CLIENT)
 public class EntityRenderers {
 	private static EntityRenderDispatcher entityRenderDispatcher;
 	private static ResourceManager resourceManager;
@@ -59,11 +56,11 @@ public class EntityRenderers {
 		Minecraft mc = Minecraft.getInstance();
 		entityRenderDispatcher = mc.getEntityRenderDispatcher();
 		resourceManager = mc.getResourceManager();
-		font = (Font) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_114365_"));
-		itemRenderer = (ItemRenderer) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_173995_"));
-		blockRenderDispatcher = (BlockRenderDispatcher) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_234576_"));
-		itemInHandRenderer = (ItemInHandRenderer) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_234577_"));
-		entityModels = (EntityModelSet) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_173996_"));
+		font = (Font) unsafe.read_member_reference(entityRenderDispatcher, "font");
+		itemRenderer = (ItemRenderer) unsafe.read_member_reference(entityRenderDispatcher, "itemRenderer");
+		blockRenderDispatcher = (BlockRenderDispatcher) unsafe.read_member_reference(entityRenderDispatcher, "blockRenderDispatcher");
+		itemInHandRenderer = (ItemInHandRenderer) unsafe.read_member_reference(entityRenderDispatcher, "itemInHandRenderer");
+		entityModels = (EntityModelSet) unsafe.read_member_reference(entityRenderDispatcher, "entityModels");
 		context = newContext();
 	}
 
@@ -110,21 +107,22 @@ public class EntityRenderers {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public static final Map<EntityType<?>, EntityRenderer<?>> getEntityRenderers() {
-		return entityRenderDispatcher.renderers;
+		return (Map<EntityType<?>, EntityRenderer<?>>) unsafe.read_member_reference(entityRenderDispatcher, "renderers");
 	}
 
 	@SuppressWarnings("unchecked")
 	public static final Map<String, EntityRenderer<? extends Player>> getPlayerRenderers() {
-		return (Map<String, EntityRenderer<? extends Player>>) unsafe.read_member_reference(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_114363_"));
+		return (Map<String, EntityRenderer<? extends Player>>) unsafe.read_member_reference(entityRenderDispatcher, "playerRenderers");
 	}
 
 	public static final void setEntityRenderers(Map<EntityType<?>, EntityRenderer<?>> entityRenderers) {
-		entityRenderDispatcher.renderers = entityRenderers;
+		unsafe.write_member(entityRenderDispatcher, "renderers", entityRenderers);
 	}
 
 	public static final void setPlayerRenderers(Map<String, EntityRenderer<? extends Player>> playerRenderers) {
-		unsafe.write_member(entityRenderDispatcher, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_114363_"), playerRenderers);
+		unsafe.write_member(entityRenderDispatcher, "playerRenderers", playerRenderers);
 	}
 
 	/**
@@ -150,7 +148,7 @@ public class EntityRenderers {
 	}
 
 	public static final void register(EntityRendererType<?> rendererType, Object... args) {
-		for (RegistryObject<EntityType<?>> type : rendererType.entityTypes()) {
+		for (DeferredHolder<EntityType<?>, ? extends EntityType<?>> type : rendererType.entityTypes()) {
 			register(type.get(), rendererType, args);
 		}
 	}
@@ -163,8 +161,8 @@ public class EntityRenderers {
 	private static Field EntityRenderer_shadowStrength;
 
 	static {
-		EntityRenderer_shadowRadius = reflection.find_declared_field(EntityRenderer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_114477_"));
-		EntityRenderer_shadowStrength = reflection.find_declared_field(EntityRenderer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_114478_"));
+		EntityRenderer_shadowRadius = reflection.find_declared_field(EntityRenderer.class, "shadowRadius");
+		EntityRenderer_shadowStrength = reflection.find_declared_field(EntityRenderer.class, "shadowStrength");
 	}
 
 	public static final float getEntityRendererShadowRadius(EntityRenderer<?> renderer) {
@@ -186,7 +184,7 @@ public class EntityRenderers {
 	private static MethodHandle LivingEntityRenderer_render;
 
 	static {
-		LivingEntityRenderer_render = symbols.find_special_method(LivingEntityRenderer.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.METHOD, "m_7392_"),
+		LivingEntityRenderer_render = symbols.find_special_method(LivingEntityRenderer.class, "render",
 				void.class,
 				LivingEntity.class, float.class, float.class, PoseStack.class, MultiBufferSource.class, int.class);
 	}

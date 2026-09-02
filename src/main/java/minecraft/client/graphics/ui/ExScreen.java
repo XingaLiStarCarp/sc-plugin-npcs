@@ -7,11 +7,8 @@ import java.util.List;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import cpw.mods.modlauncher.api.INameMappingService;
 import javabase.Pair;
-import jvmsp.reflection;
-import jvmsp.symbols;
-import jvmsp.unsafe;
+import minecraft.core.Core;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Renderable;
@@ -25,14 +22,14 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
-import net.minecraftforge.registries.RegistryObject;
-import scba.ModEntry;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import sys.jvm.reflection;
+import sys.jvm.symbols;
+import sys.jvm.unsafe;
 
 /**
  * 覆盖游戏的顶层UI
@@ -83,7 +80,7 @@ public interface ExScreen<_ImplScreen extends Screen & ExScreen<_ImplScreen>> ex
 		class __fields {
 			private static Field Screen_narratables;
 			static {
-				Screen_narratables = reflection.find_declared_field(Screen.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_169368_"));
+				Screen_narratables = reflection.find_declared_field(Screen.class, "narratables");
 			}
 		}
 		return (List<NarratableEntry>) unsafe.read_reference(this, __fields.Screen_narratables);
@@ -199,19 +196,23 @@ public interface ExScreen<_ImplScreen extends Screen & ExScreen<_ImplScreen>> ex
 	 */
 	public abstract void setSize(int x, int y, int width, int height);
 
-	@EventBusSubscriber(bus = Bus.MOD, value = Dist.CLIENT)
+	@EventBusSubscriber(value = Dist.CLIENT)
 	public static class ScreenRegister {
 		@SuppressWarnings("rawtypes")
-		private static final ArrayList<Pair<RegistryObject<MenuType>, MenuScreens.ScreenConstructor>> screen_ctors = new ArrayList<>();
+		private static final ArrayList<Pair<DeferredHolder<MenuType<?>, MenuType<?>>, MenuScreens.ScreenConstructor>> screen_ctors = new ArrayList<>();
 
+		/**
+		 * 监听RegisterMenuScreensEvent事件并注册。
+		 * 在1.20.1上无事件，需要手动注册.
+		 * 
+		 * @param event
+		 */
 		@SubscribeEvent
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public static void onFMLClientSetupEvent(FMLClientSetupEvent event) {
-			event.enqueueWork(() -> {
-				for (Pair<RegistryObject<MenuType>, MenuScreens.ScreenConstructor> pair : screen_ctors) {
-					MenuScreens.register(pair.first.get(), pair.second);
-				}
-			});
+		public static void onFMLClientSetupEvent(RegisterMenuScreensEvent event) {
+			for (Pair<DeferredHolder<MenuType<?>, MenuType<?>>, MenuScreens.ScreenConstructor> pair : screen_ctors) {
+				event.register(pair.first.get(), pair.second);
+			}
 		}
 	}
 
@@ -226,14 +227,14 @@ public interface ExScreen<_ImplScreen extends Screen & ExScreen<_ImplScreen>> ex
 	 * @return
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static <_Menu extends AbstractContainerMenu, _Screen extends Screen> void register(RegistryObject<MenuType<_Menu>> menuRegObj, Class<_Menu> menuClazz, Class<_Screen> screenClazz, String name) {
+	public static <_Menu extends AbstractContainerMenu, _Screen extends Screen> void register(DeferredHolder<MenuType<?>, MenuType<_Menu>> menuRegObj, Class<_Menu> menuClazz, Class<_Screen> screenClazz, String name) {
 		// 注册Menu对应的Screen
 		MenuScreens.ScreenConstructor screenCtor = (AbstractContainerMenu menu, Inventory inv, Component title) -> {
 			MethodHandle screenConstructor = symbols.find_constructor(screenClazz, menuClazz, Inventory.class, Component.class);
 			try {
 				return (Screen) screenConstructor.invoke(menu, inv, title);
 			} catch (Throwable ex) {
-				ModEntry.LOGGER.error("create Screen of type '" + name + "' failed", ex);
+				Core.logError("create Screen of type '" + name + "' failed", ex);
 				return null;
 			}
 		};

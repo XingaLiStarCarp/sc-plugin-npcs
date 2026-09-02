@@ -11,11 +11,10 @@ import java.util.function.Supplier;
 import minecraft.entity.data.EntityData;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * 渲染位姿同步的虚假实体
@@ -105,7 +104,7 @@ public interface ProxyRenderEntity<_RenderingEntity extends Entity, _Model> {
 	/**
 	 * 绑定实体的渲染模型
 	 */
-	@EventBusSubscriber(value = Dist.CLIENT, bus = Bus.FORGE)
+	@EventBusSubscriber(value = Dist.CLIENT)
 	public static abstract class ModelBinder<_RenderingEntity extends Entity, _Model> implements ProxyRenderEntity<_RenderingEntity, _Model> {
 		protected final Entity bindEntity;
 		protected final _Model model;
@@ -174,17 +173,15 @@ public interface ProxyRenderEntity<_RenderingEntity extends Entity, _Model> {
 		 * @param event
 		 */
 		@SubscribeEvent
-		public static void onClientTick(TickEvent.ClientTickEvent event) {
-			if (event.phase == TickEvent.Phase.END) {
-				Iterator<Entry<Entity, ModelBinder<? extends Entity, ?>>> iter = BINDERS.entrySet().iterator();
-				while (iter.hasNext()) {
-					Entry<Entity, ModelBinder<? extends Entity, ?>> entry = iter.next();
-					ModelBinder<? extends Entity, ?> dummy = entry.getValue();
-					if (dummy.isEntityRemoved()) {
-						iter.remove(); // 绑定的实体被移除时，从tick数据同步列表中移除该项
-					} else {
-						dummy.syncRenderingEntity();
-					}
+		public static void onClientTick(ClientTickEvent.Post event) {
+			Iterator<Entry<Entity, ModelBinder<? extends Entity, ?>>> iter = BINDERS.entrySet().iterator();
+			while (iter.hasNext()) {
+				Entry<Entity, ModelBinder<? extends Entity, ?>> entry = iter.next();
+				ModelBinder<? extends Entity, ?> dummy = entry.getValue();
+				if (dummy.isEntityRemoved()) {
+					iter.remove(); // 绑定的实体被移除时，从tick数据同步列表中移除该项
+				} else {
+					dummy.syncRenderingEntity();
 				}
 			}
 		}

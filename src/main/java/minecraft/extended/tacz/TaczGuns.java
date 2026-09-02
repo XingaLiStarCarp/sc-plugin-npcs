@@ -10,6 +10,7 @@ import com.tacz.guns.item.ModernKineticGunItem;
 import com.tacz.guns.resource.index.CommonGunIndex;
 import com.tacz.guns.resource.pojo.data.gun.GunData;
 
+import minecraft.core.registry.MappedRegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
@@ -29,7 +30,7 @@ public class TaczGuns {
 				.setAmmoCount(ammoCount)
 				.setFireMode(fireMode)
 				.setAmmoInBarrel(ammoInBarrel)
-				.build();
+				.build(MappedRegistryAccess.serverRegistryAccess);
 	}
 
 	public static final ItemStack getGun(String gunId, int ammoCount, FireMode fireMode, boolean ammoInBarrel) {

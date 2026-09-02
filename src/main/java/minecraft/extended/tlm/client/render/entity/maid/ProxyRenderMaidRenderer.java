@@ -5,16 +5,15 @@ import minecraft.extended.tlm.entity.maid.MaidMob;
 import minecraft.extended.tlm.entity.maid.ProxyRenderMaid;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
 /**
  * MaidMob渲染器
  */
-@EventBusSubscriber(value = Dist.CLIENT, bus = Bus.MOD)
+@EventBusSubscriber(value = Dist.CLIENT)
 public class ProxyRenderMaidRenderer extends GeneralProxyRenderMaidRenderer {
 	static {
 		MaidMob.RENDERER_TYPE.registerRenderer(ProxyRenderMaidRenderer.class, EntityRendererProvider.Context.class);

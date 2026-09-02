@@ -2,11 +2,11 @@ package minecraft.entity;
 
 import java.util.ArrayList;
 
-import jvmsp.symbols;
+import sys.jvm.symbols;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * 实体渲染器相关信息
@@ -17,7 +17,7 @@ public class EntityRendererType<_RenderAsset> {
 	private Class<?>[] rendererClazzCtorTypes = null;
 
 	// 每种实体渲染类型都有哪些EntityType
-	private final ArrayList<RegistryObject<EntityType<?>>> entityTypes;
+	private final ArrayList<DeferredHolder<EntityType<?>, ? extends EntityType<?>>> entityTypes;
 
 	// 默认的渲染使用的全部模型、纹理数据
 	private _RenderAsset defaultAsset;
@@ -48,7 +48,7 @@ public class EntityRendererType<_RenderAsset> {
 	 * 
 	 * @return
 	 */
-	public final ArrayList<RegistryObject<EntityType<?>>> entityTypes() {
+	public final ArrayList<DeferredHolder<EntityType<?>, ? extends EntityType<?>>> entityTypes() {
 		return entityTypes;
 	}
 
@@ -100,7 +100,7 @@ public class EntityRendererType<_RenderAsset> {
 	 * @return
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public final void apply(RegistryObject type) {
+	public final void apply(DeferredHolder<EntityType<?>, ? extends EntityType<?>> type) {
 		entityTypes.add(type);
 	}
 }

@@ -1,0 +1,13 @@
+{
+  "type": "ba:shittim_chest",
+  "generator": {
+    "type": "minecraft:noise",
+    "biome_source": {
+      "type": "ba:shittim_chest_biomes",
+      "possible_biomes": [
+        "ba:shittim_chest_sea"
+      ]
+    },
+    "settings": "ba:shittim_chest"
+  }
+}

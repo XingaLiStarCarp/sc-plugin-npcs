@@ -1,29 +1,23 @@
 package minecraft.entity.data;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectCollection;
 import javabase.HashKey;
-import jvmsp.reflection;
-import jvmsp.symbols;
-import jvmsp.unsafe;
+import minecraft.core.registry.MappedRegistryAccess;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializer;
-import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -31,28 +25,39 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import sys.jvm.reflection;
+import sys.jvm.unsafe;
 
 /**
  * SynchedEntityData的Unsafe操作。<br>
  * 错误的操作将导致实体数据损坏！<br>
+ * 1.21.1下，Entity类构造函数中调用defineSynchedData()并传入Builder。<br>
+ * 所有派生类均在覆写的defineSynchedData()中将需要同步的字段进行定义，待该函数定义完成后，才会将Builder对象构造为实际的SynchedEntityData对象。<br>
+ * 1.20.1的SynchedEntityData由于支持动态修改，有锁，在1.21.1已经去除锁，只允许在defineSynchedData()中修改。<br>
  */
 @SuppressWarnings("unchecked")
 public class SynchedEntityDataOp {
 	private static Field SynchedEntityData_entity;
 	private static Field SynchedEntityData_itemsById;
-	private static Field SynchedEntityData_lock;
 	private static Field SynchedEntityData_isDirty;
-	private static MethodHandle SynchedEntityData_createDataItem;
+
+	private static Field SynchedEntityData_Builder_itemsById;
 
 	static {
-		SynchedEntityData_entity = reflection.find_declared_field(SynchedEntityData.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_135344_"));
-		SynchedEntityData_itemsById = reflection.find_declared_field(SynchedEntityData.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_135345_"));
-		SynchedEntityData_lock = reflection.find_declared_field(SynchedEntityData.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_135346_"));
-		SynchedEntityData_isDirty = reflection.find_declared_field(SynchedEntityData.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_135348_"));
-		SynchedEntityData_createDataItem = symbols.find_virtual_method(SynchedEntityData.class,
-				ObfuscationReflectionHelper.remapName(INameMappingService.Domain.METHOD, "m_135385_"),
-				MethodType.methodType(void.class, EntityDataAccessor.class, Object.class));
+		SynchedEntityData_entity = reflection.find_declared_field(SynchedEntityData.class, "entity");
+		SynchedEntityData_itemsById = reflection.find_declared_field(SynchedEntityData.class, "itemsById");
+		SynchedEntityData_isDirty = reflection.find_declared_field(SynchedEntityData.class, "isDirty");
+		SynchedEntityData_Builder_itemsById = reflection.find_declared_field(SynchedEntityData.Builder.class, "itemsById");
+	}
+
+	/**
+	 * 获取Builder的底层定义集合
+	 * 
+	 * @param builder
+	 * @return
+	 */
+	public static final SynchedEntityData.DataItem<?>[] getItems(SynchedEntityData.Builder builder) {
+		return (SynchedEntityData.DataItem<?>[]) unsafe.read_reference(builder, SynchedEntityData_Builder_itemsById);
 	}
 
 	/**
@@ -61,8 +66,8 @@ public class SynchedEntityDataOp {
 	 * @param entityData
 	 * @return
 	 */
-	public static final Int2ObjectMap<SynchedEntityData.DataItem<?>> getItems(SynchedEntityData entityData) {
-		return (Int2ObjectMap<SynchedEntityData.DataItem<?>>) unsafe.read_reference(entityData, SynchedEntityData_itemsById);
+	public static final SynchedEntityData.DataItem<?>[] getItems(SynchedEntityData entityData) {
+		return (SynchedEntityData.DataItem<?>[]) unsafe.read_reference(entityData, SynchedEntityData_itemsById);
 	}
 
 	/**
@@ -72,8 +77,8 @@ public class SynchedEntityDataOp {
 	 * @param acc
 	 * @return
 	 */
-	public static final SynchedEntityData.DataItem<?> getItemNoLock(SynchedEntityData entityData, EntityDataAccessor<?> acc) {
-		return getItems(entityData).get(acc.getId());
+	public static final SynchedEntityData.DataItem<?> getItem(SynchedEntityData entityData, EntityDataAccessor<?> acc) {
+		return getItems(entityData)[acc.id()];
 	}
 
 	public static final Entity getEntity(SynchedEntityData entityData) {
@@ -82,16 +87,6 @@ public class SynchedEntityDataOp {
 
 	public static final void setEntity(SynchedEntityData entityData, Entity entity) {
 		unsafe.write(entityData, SynchedEntityData_entity, entity);
-	}
-
-	/**
-	 * 获取读写锁
-	 * 
-	 * @param entityData
-	 * @return
-	 */
-	public static final ReadWriteLock getLock(SynchedEntityData entityData) {
-		return (ReadWriteLock) unsafe.read_reference(entityData, SynchedEntityData_lock);
 	}
 
 	/**
@@ -105,93 +100,47 @@ public class SynchedEntityDataOp {
 	}
 
 	/**
-	 * 拷贝两者共有的数据
+	 * 将数据从srcData拷贝到destData中。<br>
+	 * 仅拷贝两者共有的数据（EntityDataAccessor对象相同的数据），否则直接略过。<br>
 	 * 
 	 * @param srcData
 	 * @param destData
 	 */
 	@SuppressWarnings("rawtypes")
 	public static final void copyData(SynchedEntityData srcData, SynchedEntityData destData) {
-		ReadWriteLock srcLock = getLock(srcData);
-		ReadWriteLock destLock = getLock(destData);
-		srcLock.readLock().lock();
-		destLock.writeLock().lock();
-		try {
-			Entity destEntity = getEntity(destData);
-			Int2ObjectMap<SynchedEntityData.DataItem<?>> srcItems = getItems(srcData);
-			ObjectCollection<SynchedEntityData.DataItem<?>> destItemsList = getItems(destData).values();
-			for (SynchedEntityData.DataItem destItem : destItemsList) {
-				EntityDataAccessor<?> acc = destItem.getAccessor();
-				int id = acc.getId();
-				// 判断srcData中是否存在相同ID的数据项
-				// 必须要EntityDataAccessor引用完全相同才能断定是同一项数据，否则不同实体的各自独有数据项id有可能会撞
-				SynchedEntityData.DataItem<?> srcItem = srcItems.get(id);// 有可能不存在
+		Entity destEntity = getEntity(destData);
+		SynchedEntityData.DataItem<?>[] srcItems = getItems(srcData);
+		SynchedEntityData.DataItem<?>[] destItems = getItems(destData);
+		for (SynchedEntityData.DataItem destItem : destItems) {
+			EntityDataAccessor<?> acc = destItem.getAccessor();
+			int id = acc.id();
+			// 判断srcData中是否存在相同ID的数据项
+			// 必须要EntityDataAccessor引用完全相同才能断定是同一项数据，否则不同实体的各自独有数据项id有可能会撞
+			if (id < srcItems.length) { // 考虑到两个集合不是包含关系，有可能遇到destItems有而srcData没有的数据，则直接略过
+				SynchedEntityData.DataItem<?> srcItem = srcItems[id];// 有可能不存在
 				if (srcItem != null && srcItem.getAccessor() == acc) {
-					destItem.setValue(srcItems.get(id).getValue());
+					destItem.setValue(srcItem.getValue());
 					destEntity.onSyncedDataUpdated(acc);// 通知实体数据有更新
 					destItem.setDirty(true);
 				}
 			}
-			setDirty(destData, true);// 为目标标记需要更新
-		} catch (Throwable ex) {
-			throw ex;
-		} finally {
-			srcLock.readLock().unlock();
-			destLock.writeLock().unlock();
 		}
-	}
-
-	@SuppressWarnings("rawtypes")
-	public static final void copyData(SynchedEntityData srcData, SynchedEntityData destData, EntityDataAccessor<?>... accs) {
-		ReadWriteLock srcLock = getLock(srcData);
-		ReadWriteLock destLock = getLock(destData);
-		srcLock.readLock().lock();
-		destLock.writeLock().lock();
-		try {
-			Entity destEntity = getEntity(destData);
-			Int2ObjectMap<SynchedEntityData.DataItem<?>> srcItems = getItems(srcData);
-			Int2ObjectMap<SynchedEntityData.DataItem<?>> destItems = getItems(destData);
-			for (EntityDataAccessor<?> acc : accs) {
-				int id = acc.getId();
-				SynchedEntityData.DataItem<?> srcItem = srcItems.get(id);
-				SynchedEntityData.DataItem destItem = destItems.get(id);
-				if (destItem != null && srcItem != null && srcItem.getAccessor() == acc) {
-					destItem.setValue(srcItems.get(id).getValue());
-					destEntity.onSyncedDataUpdated(acc);
-					destItem.setDirty(true);
-				}
-			}
-			setDirty(destData, true);
-		} catch (Throwable ex) {
-			throw ex;
-		} finally {
-			srcLock.readLock().unlock();
-			destLock.writeLock().unlock();
-		}
+		setDirty(destData, true);// 为目标标记需要更新
 	}
 
 	/**
 	 * 安全地初始化字段。如果字段已经初始化则忽略该操作。
 	 * 
 	 * @param <T>
-	 * @param entityData
+	 * @param builder
 	 * @param accessor
 	 * @param value
 	 */
-	public static <T> void define(SynchedEntityData entityData, EntityDataAccessor<T> accessor, T value) {
-		int i = accessor.getId();
-		if (i > 254) {
-			throw new IllegalArgumentException("Data value id is too big with " + i + "! (Max is 254)");
-		} else if (entityData.hasItem(accessor)) {
+	public static <T> void define(SynchedEntityData.Builder builder, EntityDataAccessor<T> accessor, T value) {
+		if (getItems(builder)[accessor.id()] != null) {
 			return;// 如果已经初始化，则不再重复初始化
-		} else if (EntityDataSerializers.getSerializedId(accessor.getSerializer()) < 0) {
-			throw new IllegalArgumentException("Unregistered serializer " + accessor.getSerializer() + " for " + i + "!");
 		} else {
-			try {
-				SynchedEntityData_createDataItem.invoke(entityData, accessor, value);
-			} catch (Throwable ex) {
-				ex.printStackTrace();
-			}
+			builder.define(accessor, value);
 		}
 	}
 
@@ -300,34 +249,26 @@ public class SynchedEntityDataOp {
 	 * @param entityData
 	 */
 	@SuppressWarnings({ "rawtypes" })
-	public static void define(Class<? extends Entity> entityClazz, SynchedEntityData entityData) {
+	public static void define(Class<? extends Entity> entityClazz, SynchedEntityData.Builder builder) {
 		if (hasEntries(entityClazz)) {
 			ArrayList<EntityDataAccessor<?>> entries = dataEntries(entityClazz);
 			for (EntityDataAccessor<?> acc : entries) {
-				define(entityData, (EntityDataAccessor) acc, getDefaultValue(acc));
+				define(builder, (EntityDataAccessor) acc, getDefaultValue(acc));
 			}
 		}
-	}
-
-	public static void define(Entity entity) {
-		define(entity.getClass(), entity.getEntityData());
 	}
 
 	/**
 	 * 递归地初始化实体类自身及其父类的字段。
 	 * 
 	 * @param entityClazz
-	 * @param entityData
+	 * @param builder
 	 */
-	public static void defineAll(Class<? extends Entity> entityClazz, SynchedEntityData entityData) {
+	public static void defineAll(Class<? extends Entity> entityClazz, SynchedEntityData.Builder builder) {
 		while (entityClazz != Entity.class) {
-			define(entityClazz, entityData);
+			define(entityClazz, builder);
 			entityClazz = (Class<? extends Entity>) entityClazz.getSuperclass();
 		}
-	}
-
-	public static void defineAll(Entity entity) {
-		defineAll(entity.getClass(), entity.getEntityData());
 	}
 
 	/**
@@ -341,11 +282,11 @@ public class SynchedEntityDataOp {
 	}
 
 	public static String string(Component component) {
-		return Component.Serializer.toJson(component);
+		return Component.Serializer.toJson(component, MappedRegistryAccess.serverRegistryAccess);
 	}
 
 	public static MutableComponent component(String component) {
-		return component == null ? Component.empty() : Component.Serializer.fromJson(component);
+		return component == null ? Component.empty() : Component.Serializer.fromJson(component, MappedRegistryAccess.serverRegistryAccess);
 	}
 
 	public static String string(ResourceLocation loc) {
@@ -556,35 +497,35 @@ public class SynchedEntityDataOp {
 	public static final EntityDataAccessor<Integer> DATA_TICKS_FROZEN;
 
 	static {
-		reflection.find_class("net.minecraft.world.entity.Entity", true);
-		DATA_SHARED_FLAGS_ID = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19805_"));
-		DATA_AIR_SUPPLY_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19832_"));
-		DATA_CUSTOM_NAME = (EntityDataAccessor<Optional<Component>>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19833_"));
-		DATA_CUSTOM_NAME_VISIBLE = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19834_"));
-		DATA_SILENT = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19835_"));
-		DATA_NO_GRAVITY = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19836_"));
-		DATA_POSE = (EntityDataAccessor<Pose>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_19806_"));
-		DATA_TICKS_FROZEN = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Entity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_146800_"));
+		unsafe.ensure_class_initialized(Entity.class);
+		DATA_SHARED_FLAGS_ID = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Entity.class, "DATA_SHARED_FLAGS_ID");
+		DATA_AIR_SUPPLY_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Entity.class, "DATA_AIR_SUPPLY_ID");
+		DATA_CUSTOM_NAME = (EntityDataAccessor<Optional<Component>>) unsafe.read_static_reference(Entity.class, "DATA_CUSTOM_NAME");
+		DATA_CUSTOM_NAME_VISIBLE = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, "DATA_CUSTOM_NAME_VISIBLE");
+		DATA_SILENT = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, "DATA_SILENT");
+		DATA_NO_GRAVITY = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(Entity.class, "DATA_NO_GRAVITY");
+		DATA_POSE = (EntityDataAccessor<Pose>) unsafe.read_static_reference(Entity.class, "DATA_POSE");
+		DATA_TICKS_FROZEN = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Entity.class, "DATA_TICKS_FROZEN");
 	}
 
 	/**
-	 * 创建并初始化entity关联的空entityData。<br>
+	 * 创建并初始化entity关联的空SynchedEntityData.Builder。<br>
 	 * 这些数据字段是Entity类所属的，无法通过defineSynchedData()定义。<br>
 	 * 
 	 * @param entity
 	 * @return
 	 */
-	public static final SynchedEntityData newBasicEntityData(Entity entity) {
-		SynchedEntityData entityData = new SynchedEntityData(entity);
-		entityData.define(DATA_SHARED_FLAGS_ID, (byte) 0);
-		entityData.define(DATA_AIR_SUPPLY_ID, 300);
-		entityData.define(DATA_CUSTOM_NAME_VISIBLE, false);
-		entityData.define(DATA_CUSTOM_NAME, Optional.empty());
-		entityData.define(DATA_SILENT, false);
-		entityData.define(DATA_NO_GRAVITY, false);
-		entityData.define(DATA_POSE, Pose.STANDING);
-		entityData.define(DATA_TICKS_FROZEN, 0);
-		return entityData;
+	public static final SynchedEntityData.Builder newBasicEntityData(Entity entity) {
+		SynchedEntityData.Builder builder = new SynchedEntityData.Builder(entity);
+		builder.define(DATA_SHARED_FLAGS_ID, (byte) 0);
+		builder.define(DATA_AIR_SUPPLY_ID, 300);
+		builder.define(DATA_CUSTOM_NAME_VISIBLE, false);
+		builder.define(DATA_CUSTOM_NAME, Optional.empty());
+		builder.define(DATA_SILENT, false);
+		builder.define(DATA_NO_GRAVITY, false);
+		builder.define(DATA_POSE, Pose.STANDING);
+		builder.define(DATA_TICKS_FROZEN, 0);
+		return builder;
 	}
 
 	public static final int ENTITY_SHARED_FLAG_INVISIBLE = 5;
@@ -615,9 +556,22 @@ public class SynchedEntityDataOp {
 
 	// LivingEntity所属
 	public static final EntityDataAccessor<Byte> DATA_LIVING_ENTITY_FLAGS;
+	public static final EntityDataAccessor<Float> DATA_HEALTH_ID;
+	public static final EntityDataAccessor<List<ParticleOptions>> DATA_EFFECT_PARTICLES;
+	public static final EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID;
+	public static final EntityDataAccessor<Integer> DATA_ARROW_COUNT_ID;
+	public static final EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID;
+	public static final EntityDataAccessor<Optional<BlockPos>> SLEEPING_POS_ID;
 
 	static {
-		DATA_LIVING_ENTITY_FLAGS = (EntityDataAccessor<Byte>) unsafe.read_static_reference(LivingEntity.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_20909_"));
+		unsafe.ensure_class_initialized(LivingEntity.class);
+		DATA_LIVING_ENTITY_FLAGS = (EntityDataAccessor<Byte>) unsafe.read_static_reference(LivingEntity.class, "DATA_LIVING_ENTITY_FLAGS");
+		DATA_HEALTH_ID = (EntityDataAccessor<Float>) unsafe.read_static_reference(LivingEntity.class, "DATA_HEALTH_ID");
+		DATA_EFFECT_PARTICLES = (EntityDataAccessor<List<ParticleOptions>>) unsafe.read_static_reference(LivingEntity.class, "DATA_EFFECT_PARTICLES");
+		DATA_EFFECT_AMBIENCE_ID = (EntityDataAccessor<Boolean>) unsafe.read_static_reference(LivingEntity.class, "DATA_EFFECT_AMBIENCE_ID");
+		DATA_ARROW_COUNT_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(LivingEntity.class, "DATA_ARROW_COUNT_ID");
+		DATA_STINGER_COUNT_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(LivingEntity.class, "DATA_STINGER_COUNT_ID");
+		SLEEPING_POS_ID = (EntityDataAccessor<Optional<BlockPos>>) unsafe.read_static_reference(LivingEntity.class, "SLEEPING_POS_ID");
 	}
 
 	public static final void setLivingEntityFlag(LivingEntity entity, int flags, boolean value) {
@@ -635,20 +589,20 @@ public class SynchedEntityDataOp {
 	 */
 	public static final EntityDataAccessor<Float> DATA_PLAYER_ABSORPTION_ID;
 	public static final EntityDataAccessor<Integer> DATA_SCORE_ID;
-	public static final EntityDataAccessor<Byte> DATA_PLAYER_MODEL_CUSTOMISATION;
+	public static final EntityDataAccessor<Byte> DATA_PLAYER_MODE_CUSTOMISATION;
 	public static final EntityDataAccessor<Byte> DATA_PLAYER_MAIN_HAND;
 	public static final EntityDataAccessor<CompoundTag> DATA_SHOULDER_LEFT;
 	public static final EntityDataAccessor<CompoundTag> DATA_SHOULDER_RIGHT;
 
 	static {
 		// 需要先初始化类才能获得其静态字段
-		reflection.find_class("net.minecraft.world.entity.player.Player", true);
-		DATA_PLAYER_ABSORPTION_ID = (EntityDataAccessor<Float>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36107_"));
-		DATA_SCORE_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36108_"));
-		DATA_PLAYER_MODEL_CUSTOMISATION = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36089_"));
-		DATA_PLAYER_MAIN_HAND = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36090_"));
-		DATA_SHOULDER_LEFT = (EntityDataAccessor<CompoundTag>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36091_"));
-		DATA_SHOULDER_RIGHT = (EntityDataAccessor<CompoundTag>) unsafe.read_static_reference(Player.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.FIELD, "f_36092_"));
+		unsafe.ensure_class_initialized(Player.class);
+		DATA_PLAYER_ABSORPTION_ID = (EntityDataAccessor<Float>) unsafe.read_static_reference(Player.class, "DATA_PLAYER_ABSORPTION_ID");
+		DATA_SCORE_ID = (EntityDataAccessor<Integer>) unsafe.read_static_reference(Player.class, "DATA_SCORE_ID");
+		DATA_PLAYER_MODE_CUSTOMISATION = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Player.class, "DATA_PLAYER_MODE_CUSTOMISATION");
+		DATA_PLAYER_MAIN_HAND = (EntityDataAccessor<Byte>) unsafe.read_static_reference(Player.class, "DATA_PLAYER_MAIN_HAND");
+		DATA_SHOULDER_LEFT = (EntityDataAccessor<CompoundTag>) unsafe.read_static_reference(Player.class, "DATA_SHOULDER_LEFT");
+		DATA_SHOULDER_RIGHT = (EntityDataAccessor<CompoundTag>) unsafe.read_static_reference(Player.class, "DATA_SHOULDER_RIGHT");
 	}
 
 	public static final int PLAYER_MODEL_PART_CAPE = PlayerModelPart.CAPE.getMask();
@@ -673,6 +627,6 @@ public class SynchedEntityDataOp {
 	 * @param player
 	 */
 	public static final void showPlayerModelParts(Player player, int parts) {
-		player.getEntityData().set(DATA_PLAYER_MODEL_CUSTOMISATION, (byte) parts);
+		player.getEntityData().set(DATA_PLAYER_MODE_CUSTOMISATION, (byte) parts);
 	}
 }

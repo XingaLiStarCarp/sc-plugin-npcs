@@ -2,22 +2,21 @@ package minecraft.ui;
 
 import java.lang.invoke.MethodHandle;
 
-import cpw.mods.modlauncher.api.INameMappingService;
-import jvmsp.symbols;
-import jvmsp.type.java_type;
-import minecraft.registry.Registers;
-import net.minecraft.network.FriendlyByteBuf;
+import minecraft.core.Core;
+import minecraft.core.registry.RegistryMap;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
-import net.minecraftforge.common.extensions.IForgeMenuType;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
-import net.minecraftforge.registries.RegistryObject;
-import scba.ModEntry;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import sys.jvm.symbols;
+import sys.jvm.type.java_type;
 
 public interface ExMenu<_Menu extends AbstractContainerMenu & ExMenu<_Menu>> {
+	public static final RegistryMap<MenuType<?>> MENUS = (RegistryMap<MenuType<?>>) RegistryMap.of(Registries.MENU);
+
 	/**
 	 * 注册Menu。<br>
 	 * _Menu必须有构造函数_Menu(MenuType type, int id, Inventory inv, FriendlyByteBuf buf)。<br>
@@ -29,18 +28,19 @@ public interface ExMenu<_Menu extends AbstractContainerMenu & ExMenu<_Menu>> {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	public static <_Menu extends AbstractContainerMenu> RegistryObject<MenuType<_Menu>> newType(Class<_Menu> menuClazz, String name) {
-		java_type.wrapper<RegistryObject<MenuType<_Menu>>> menuType = java_type.wrapper.wrap();
-		menuType.value = Registers.MENU_REG.register(name, () -> IForgeMenuType.create((int id, Inventory inv, FriendlyByteBuf buf) -> {
-			// Inventory, FriendlyByteBuf参数为mod loader拓展，原AbstractContainerMenu构造函数只有MenuType, int参数
-			MethodHandle menuConstructor = symbols.find_constructor(menuClazz, MenuType.class, int.class, Inventory.class, FriendlyByteBuf.class);
+	public static <_Menu extends AbstractContainerMenu> DeferredHolder<MenuType<?>, MenuType<_Menu>> newType(Class<_Menu> menuClazz, String name) {
+		java_type.wrapper<DeferredHolder<MenuType<?>, MenuType<_Menu>>> menuType = java_type.wrapper.wrap();
+		menuType.value = MENUS.register(name, () -> new MenuType<>((int id, Inventory inv) -> {
+			// 在NeoForge中，额外数据通过其他方式传递
+			// 如果需要FriendlyByteBuf，可以使用IPlayerExtension.openMenu或IMenuTypeExtension
+			MethodHandle menuConstructor = symbols.find_constructor(menuClazz, MenuType.class, int.class, Inventory.class);
 			try {
-				return (_Menu) menuConstructor.invoke(menuType.value.get(), id, inv, buf);
+				return (_Menu) menuConstructor.invoke(menuType.value.get(), id, inv);
 			} catch (Throwable ex) {
-				ModEntry.LOGGER.error("create Menu of type '" + name + "' failed", ex);
+				Core.logError("create Menu of type '" + name + "' failed", ex);
 				return null;
 			}
-		}));
+		}, null));// FeatureFlagSet
 		return menuType.value;
 	}
 
@@ -70,7 +70,7 @@ public interface ExMenu<_Menu extends AbstractContainerMenu & ExMenu<_Menu>> {
 		class __methods {
 			private static MethodHandle AbstractContainerMenu_addSlot;
 			static {
-				AbstractContainerMenu_addSlot = symbols.find_virtual_method(AbstractContainerMenu.class, ObfuscationReflectionHelper.remapName(INameMappingService.Domain.METHOD, "m_38897_"), Slot.class, Slot.class);
+				AbstractContainerMenu_addSlot = symbols.find_virtual_method(AbstractContainerMenu.class, "addSlot", Slot.class, Slot.class);
 			}
 		}
 		try {

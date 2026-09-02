@@ -6,16 +6,15 @@ import minecraft.component.trait.OpTrait;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * 交互特性类。<br>
  * 交互事件是双端事件，客户端与服务端会分别触发一次，如果是本地游戏则触发两次。<br>
  */
-@EventBusSubscriber(bus = Bus.FORGE)
+@EventBusSubscriber
 public abstract class InteractionTrait<_TargetEntity extends Entity & OpProvider> extends OpTrait<_TargetEntity, PlayerInteractEvent.EntityInteract, InteractionTrait<_TargetEntity>> implements DualEndedTrait<_TargetEntity> {
 	private final boolean isClient;
 

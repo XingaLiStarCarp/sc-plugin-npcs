@@ -15,7 +15,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * Touhou Little Maid模组的女仆类型实体，需要配合渲染器EntityMaidRenderer使用
@@ -24,11 +24,11 @@ public class MaidMob extends BaseMob implements ProxyRenderMaidEntity {
 
 	public static final EntityRendererType<MaidModelAsset> RENDERER_TYPE = new EntityRendererType<>();
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, MobCategory category, Supplier<AttributeSupplier> attributes) {
 		return BaseMob.newType(entityClazz, width, height, RENDERER_TYPE, typeName, category, attributes);
 	}
 
-	public static final <T extends BaseMob> RegistryObject<EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, Supplier<AttributeSupplier> attributes) {
+	public static final <T extends BaseMob> DeferredHolder<EntityType<?>, EntityType<T>> newType(Class<T> entityClazz, float width, float height, String typeName, Supplier<AttributeSupplier> attributes) {
 		return newType(entityClazz, width, height, typeName, MobCategory.MISC, attributes);
 	}
 

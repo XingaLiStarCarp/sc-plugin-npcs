@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
-import minecraft.ModPaths;
+import minecraft.core.Core;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -98,6 +98,6 @@ public class RandomTexture {
 	 * @return
 	 */
 	public static final RandomTexture localConfig(String namespace, String locPrefix, String configRelativeDir) {
-		return local(namespace, locPrefix, ModPaths.config(configRelativeDir));
+		return local(namespace, locPrefix, Core.config(configRelativeDir));
 	}
 }
